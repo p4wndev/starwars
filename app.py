@@ -77,20 +77,25 @@ def main():
         }
     </style>
     """, unsafe_allow_html=True)
+    import os
 
+    current_dir = os.path.dirname(__file__)
+    image_path_logo2 = os.path.join(current_dir, "images", "LOGO2.png")
+    image_path_logo1 = os.path.join(current_dir, "images", "logo1.jpg")
+    image_path_eu = os.path.join(current_dir, "images", "eu.png")
     # st.markdown("<h1 style='text-align: center; color: #2563EB;'> Project STARWARS</h1>", unsafe_allow_html=True)
     logo = st.columns([0.2,0.5,0.1,0.2])
     with logo[1]:
         st.write("")
-        st.image("/workspaces/starwars/images/LOGO2.png")
+        st.image("image_path_logo2")
     with logo[2]:
         st.write("")
         st.write("")
         st.write("")
         st.write("")
         
-        st.image("/workspaces/starwars/images/eu.png")
-    st.logo("/workspaces/starwars/images/logo1.jpg")
+        st.image("image_path_eu")
+    st.logo("image_path_logo1")
     left_co1, cent_co1,last_co1 = st.columns([0.0001,0.9,0.0001])
     with cent_co1:
         tabs = ui.tabs(options=['Polygon vs Polygon', 'Polygon vs Map', 'Cluster vs Cluster', 'Cluster vs Map', 'Map vs Map'], default_value='Polygon vs Polygon', key="tabs")
