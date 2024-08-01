@@ -82,15 +82,15 @@ def main():
     logo = st.columns([0.2,0.5,0.1,0.2])
     with logo[1]:
         st.write("")
-        st.image(".\images\logo2.png")
+        st.image("/workspaces/starwars/images/LOGO2.png")
     with logo[2]:
         st.write("")
         st.write("")
         st.write("")
         st.write("")
         
-        st.image(".\images\eu.png")
-    st.logo(".\images\LOGO1.jpg")
+        st.image("/workspaces/starwars/images/eu.png")
+    st.logo("/workspaces/starwars/images/logo1.jpg")
     left_co1, cent_co1,last_co1 = st.columns([0.0001,0.9,0.0001])
     with cent_co1:
         tabs = ui.tabs(options=['Polygon vs Polygon', 'Polygon vs Map', 'Cluster vs Cluster', 'Cluster vs Map', 'Map vs Map'], default_value='Polygon vs Polygon', key="tabs")
