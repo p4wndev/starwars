@@ -11,7 +11,7 @@ from scipy.spatial.distance import euclidean
 
 def validate_input(polygons1, polygons2, mode):
     if mode == "polygon_vs_polygon":
-        if (len(polygons1)-1) != 1 or (len(polygons2)-1) != 1:
+        if (len(polygons1)-1) > 1 or (len(polygons2)-1) > 1:
             return False, "Error: Both images must contain exactly one polygon for polygon vs polygon comparison."
     elif mode == "polygon_vs_map":
         if (len(polygons2)-1) != 1:
