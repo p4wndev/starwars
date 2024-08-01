@@ -218,7 +218,7 @@ def process_image_and_find_similar_polygons(image1, image2, top_n=5, progress_ca
             plot_image = plot_one_vs_one(plot_image, vertices, centroid, similarity, color)
         else:
             is_highest_similarity = (i == 0)  # Đánh dấu polygon có độ tương đồng cao nhất
-            plot_image = image1.copy()
+            plot_image = image1
             plot_image = plot_polygon_and_circle(plot_image, vertices, centroid, similarity, color, is_highest_similarity)
         
     if progress_callback:
