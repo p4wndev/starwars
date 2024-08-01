@@ -210,15 +210,15 @@ def process_image_and_find_similar_polygons(image1, image2, top_n=5, progress_ca
     similarity_scores = sorted(similarity_scores, key=lambda x: x[0], reverse=True)[:top_n]
 
     highest_similarity = similarity_scores[0][0] if similarity_scores else 0
-
+    
     for i, (similarity, vertices, cropped_image, centroid, min_angle_vertex, sorted_angle_values, sorted_angles, w1, w2) in enumerate(similarity_scores):
         color = get_color_for_similarity(similarity, highest_similarity)
         if is_one_vs_one:
-            plot_image = image1
+            plot_image = image1.copy()
             plot_image = plot_one_vs_one(plot_image, vertices, centroid, similarity, color)
         else:
             is_highest_similarity = (i == 0)  # Đánh dấu polygon có độ tương đồng cao nhất
-            plot_image = image1
+            plot_image = image1.copy()
             plot_image = plot_polygon_and_circle(plot_image, vertices, centroid, similarity, color, is_highest_similarity)
         
     if progress_callback:

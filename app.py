@@ -29,13 +29,45 @@ def display_selected_image(uploaded_file, container_id, index):
     </div>
     """, unsafe_allow_html=True)
     
+def add_white_background(image):
+    # Kiểm tra xem ảnh có kênh alpha không
+    if image.shape[2] == 4:
+        # Tạo một ảnh nền trắng
+        white_background = np.ones(image.shape[:3], dtype=np.uint8) * 255
+        
+        # Trích xuất kênh alpha
+        alpha = image[:, :, 3] / 255.0
+        
+        # Thực hiện alpha blending
+        for c in range(3):
+            white_background[:, :, c] = (1 - alpha) * white_background[:, :, c] + alpha * image[:, :, c]
+        
+        return white_background.astype(np.uint8)
+    else:
+        # Nếu ảnh không có kênh alpha, trả về ảnh gốc
+        return image
+
 def read_image(uploaded_file):
     if uploaded_file is not None:
         uploaded_file.seek(0)
         file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-        image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-        return image
-    return None
+        image = cv2.imdecode(file_bytes, cv2.IMREAD_UNCHANGED)  # Đọc cả kênh alpha nếu có
+        
+        # Chuyển đổi từ BGR sang RGB
+        if image.shape[2] == 3:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        elif image.shape[2] == 4:
+            image = cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA)
+        
+        return add_white_background(image)
+    return None 
+# def read_image(uploaded_file):
+#     if uploaded_file is not None:
+#         uploaded_file.seek(0)
+#         file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+#         image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+#         return image
+#     return None
 
 def main():
     st.markdown("""

@@ -25,8 +25,25 @@ def crop_polygon_from_image(image, vertices):
     cropped = result[y:y+h, x:x+w]
     return cropped
 
+# def remove_white_pixels(image, threshold=240):
+#     white_mask = cv2.inRange(image, np.array([threshold, threshold, threshold]), np.array([255, 255, 255]))
+#     non_white_mask = cv2.bitwise_not(white_mask)
+#     result = cv2.bitwise_and(image, image, mask=non_white_mask)
+#     return result
+
 def remove_white_pixels(image, threshold=240):
-    white_mask = cv2.inRange(image, np.array([threshold, threshold, threshold]), np.array([255, 255, 255]))
+    if len(image.shape) == 2:  # Grayscale image
+        white_mask = cv2.inRange(image, threshold, 255)
+    elif len(image.shape) == 3:  # Color image
+        if image.shape[2] == 3:  # RGB
+            white_mask = cv2.inRange(image, np.array([threshold, threshold, threshold]), np.array([255, 255, 255]))
+        elif image.shape[2] == 4:  # RGBA
+            white_mask = cv2.inRange(image[:,:,:3], np.array([threshold, threshold, threshold]), np.array([255, 255, 255]))
+        else:
+            raise ValueError("Unsupported number of channels")
+    else:
+        raise ValueError("Unsupported image shape")
+
     non_white_mask = cv2.bitwise_not(white_mask)
     result = cv2.bitwise_and(image, image, mask=non_white_mask)
     return result
