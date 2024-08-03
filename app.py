@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from PIL import Image
 from process_image.compare_polygon import process_image_and_find_similar_polygons, compare_maps, plot_polygon_and_image, extract_polygons, calculate_angles
-from process_image.compare_cluster import process_image_and_find_similar_cluster, process_cluster, display_results
+from process_image.compare_cluster import process_image_and_find_similar_cluster, process_cluster, display_results, compare_images_knn, plot_matching_clusters_knn
 import io, base64
 import os
 import matplotlib.pyplot as plt
@@ -479,7 +479,54 @@ def cluster_vs_cluster():
                         error_container.error("No valid comparisons could be made.")
           
 def cluster_vs_map():
-    st.subheader("Updating...")
+    error_container = st.empty()  # Placeholder for error messages
+    container = st.container(border=True)
+
+    compare_button = st.button("Compare", type="primary", key="cluster_vs_map_button", use_container_width=True)
+    with st.expander("Upload Images", expanded=True):
+        k = st.number_input("Number of nearest neighbors (KNN)", min_value=3, max_value=20, value=3, step=1, key="cluster_vs_map_number_input")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown(
+                """
+                <h4 style='color: #2563EB;'>Cluster Image</h4>
+                """,
+                unsafe_allow_html=True)
+            uploaded_file1 = st.file_uploader("Select cluster image", type=['png', 'jpg', 'jpeg'], key="cluster_vs_map_uploader1")
+            if uploaded_file1:
+                display_selected_image(uploaded_file1, "cluster_container_1", 0)
+        
+        with col2:
+            st.markdown(
+                """
+                <h4 style='color: #2563EB;'>Map Image</h4>
+                """,
+                unsafe_allow_html=True)
+            uploaded_file2 = st.file_uploader("Select map image", type=['png', 'jpg', 'jpeg'], key="cluster_vs_map_uploader2")
+            if uploaded_file2:
+                display_selected_image(uploaded_file2, "map_container_1", 0)
+    if compare_button:
+        if not uploaded_file1 or not uploaded_file2:
+            error_container.error("Error: Please upload an image for both the cluster and the map.")
+        else:
+            with st.spinner("Comparing images..."):
+                uploaded_file1_image = read_image(uploaded_file1)
+                uploaded_file2_image = read_image(uploaded_file2)
+                
+                if uploaded_file1_image is None or uploaded_file2_image is None:
+                    error_container.error("Error: One or both images could not be read.")
+                else:
+                    matching_clusters, num_clusters1, num_clusters2 = compare_images_knn(uploaded_file1_image, uploaded_file2_image, k)
+                    result = plot_matching_clusters_knn(uploaded_file1_image, uploaded_file2_image, matching_clusters)
+                    with container:
+                        st.subheader("Comparison Result")
+                        ui.badges([(f"Matching Clusters: {len(matching_clusters)}",'default')])
+                        st.pyplot(result)
+                        with st.expander("View Explanation"):
+                            st.write("")
+                            # st.write("Identify the polygon with the closest match to the input polygon, determined by comparing their sets of characteristic angles.")
+
 
 def map_vs_map():
     error_container = st.empty()  # Placeholder for error messages

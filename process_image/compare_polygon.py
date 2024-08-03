@@ -152,7 +152,7 @@ def compute_size_difference_weight(len_v1, len_v2):
     return weight
 
 # Tính khoảng cách DTW giữa các cặp vector
-def normalize_and_compute_cosine_similarity(v1, v2):
+def normalize_and_compute_dtw_similarity(v1, v2):
     len_v1 = len(v1)
     len_v2 = len(v2)
     size_weight = compute_size_difference_weight(len_v1, len_v2)
@@ -201,7 +201,7 @@ def process_image_and_find_similar_polygons(image1, image2, top_n=5, progress_ca
     for i, (vertices, cropped_image) in enumerate(polygons1):
         centroid1, min_angle_vertex1, sorted_vertices1, sorted_angle_values1, sorted_angles1, polygon_angles1 = calculate_angles(vertices)
         combined_angles1 = np.concatenate([sorted_angle_values1, sorted(polygon_angles1)])
-        similarity, w1, w2 = normalize_and_compute_cosine_similarity(combined_angles1, combined_angles2)
+        similarity, w1, w2 = normalize_and_compute_dtw_similarity(combined_angles1, combined_angles2)
         similarity_scores.append((similarity, vertices, cropped_image, centroid1, min_angle_vertex1, sorted_angle_values1, sorted_angles1, w1, w2))
         
     if progress_callback:
@@ -263,7 +263,7 @@ def compare_maps(input_image, image2, similarity_threshold=80.0, progress_callba
             if j in used_polygons_image:
                 continue
             centroid_image, _, _, sorted_angle_values_image, _, _ = calculate_angles(vertices_image)
-            similarity, w1, w2 = normalize_and_compute_cosine_similarity(sorted_angle_values_input, sorted_angle_values_image)
+            similarity, w1, w2 = normalize_and_compute_dtw_similarity(sorted_angle_values_input, sorted_angle_values_image)
             if similarity >= similarity_threshold:
                 matched_polygons += 1
                 used_polygons_input.add(i)
