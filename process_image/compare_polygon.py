@@ -139,6 +139,7 @@ def get_color_for_similarity(similarity, max_similarity):
 def plot_one_vs_one(image_cluster, vertices, centroid, similarity, color):
     return plot_polygon_and_circle(image_cluster, vertices, centroid, similarity, color, False)
 
+#------------------------------------------DTW-------------------------------------------
 def normalize_vector(vector):
     norm = np.linalg.norm(vector)
     return vector / norm if norm != 0 else vector
@@ -174,7 +175,66 @@ def normalize_and_compute_dtw_similarity(v1, v2):
 
     return percent_similarity, v1_weighted, v2_weighted
 
-def process_image_and_find_similar_polygons(image1, image2, top_n=5, progress_callback=None, is_one_vs_one=False, compare_mode="polygon_vs_polygon"):
+#----------------------------------------Subarrays-------------------------------------------
+
+def find_largest_consecutive_matches(A, B, k1=5, k2=3):
+    """
+    Tìm nhóm khớp liên tiếp lớn nhất giữa hai mảng dựa trên ngưỡng k.
+    
+    Parameters:
+    A (list): Mảng đầu tiên
+    B (list): Mảng thứ hai
+    k (int): Ngưỡng khớp
+    
+    Returns:
+    tuple: Nhóm khớp liên tiếp lớn nhất dưới dạng (nhóm A, nhóm B)
+    """
+    def subarrays(arr):
+        """Tạo ra tất cả các nhóm liên tiếp từ mảng arr."""
+        result = []
+        for start in range(len(arr)):
+            for end in range(start + 1, len(arr) + 1):
+                result.append(arr[start:end])
+        return result
+
+    def is_match(subA, subB):
+        """Kiểm tra xem hai nhóm có khớp hay không dựa trên ngưỡng k."""
+        if len(subA) != len(subB):
+            return False
+        return all(abs(a - b) < k1 for a, b in zip(subA, subB))
+    
+    subarrays_A = subarrays(A)
+    subarrays_B = subarrays(B)
+    
+    largest_match = None
+    largest_match_length = 0
+
+    for subA in subarrays_A:
+        if len(subA) >= k2:  # Chỉ kiểm tra nhóm có độ dài lớn hơn hoặc bằng k2
+            for subB in subarrays_B:
+                if len(subB) == len(subA) and is_match(subA, subB):
+                    if len(subA) > largest_match_length:
+                        largest_match = (subA, subB)
+                        largest_match_length = len(subA)
+    
+    return largest_match_length
+
+def calculate_percentage_match(A, B, k1, k2):
+    largest_match_length = find_largest_consecutive_matches(A, B, k1, k2)
+    
+    if largest_match_length == 0:
+        return 0.0
+    
+    total_length_A = len(A)
+    total_length_B = len(B)
+    
+    # Tính tỷ lệ phần trăm khớp dựa trên mảng có độ dài nhỏ hơn
+    percentage_match = (largest_match_length / max(total_length_A, total_length_B)) * 100
+    return percentage_match
+
+#----------------------------------------------------------------------
+
+def process_image_and_find_similar_polygons(image1, image2, top_n=5, progress_callback=None, is_one_vs_one=False, compare_mode="polygon_vs_polygon", option="Subarrays", k1=5, k2=3):
     if progress_callback:
         progress_callback(1)  # Update progress to 1%
     # Extract polygons
@@ -194,33 +254,50 @@ def process_image_and_find_similar_polygons(image1, image2, top_n=5, progress_ca
     
     for i, (vertices, cropped_image) in enumerate(polygons2):
         centroid2, min_angle_vertex2, sorted_vertices2, sorted_angle_values2, sorted_angles2, polygon_angles2 = calculate_angles(vertices)
-        combined_angles2 = np.concatenate([sorted_angle_values2, sorted(polygon_angles2)])
+        combined_angles2 = np.concatenate([sorted(sorted_angle_values2), sorted(polygon_angles2)])
 
     similarity_scores = []
 
     for i, (vertices, cropped_image) in enumerate(polygons1):
         centroid1, min_angle_vertex1, sorted_vertices1, sorted_angle_values1, sorted_angles1, polygon_angles1 = calculate_angles(vertices)
-        combined_angles1 = np.concatenate([sorted_angle_values1, sorted(polygon_angles1)])
-        similarity, w1, w2 = normalize_and_compute_dtw_similarity(combined_angles1, combined_angles2)
-        similarity_scores.append((similarity, vertices, cropped_image, centroid1, min_angle_vertex1, sorted_angle_values1, sorted_angles1, w1, w2))
-        
-    if progress_callback:
-        progress_callback(60)  # Update progress to 60%
+        combined_angles1 = np.concatenate([sorted(sorted_angle_values1), sorted(polygon_angles1)])
+        if option == "Subarrays":
+            similarity = calculate_percentage_match(combined_angles1, combined_angles2, k1, k2)
+            similarity_scores.append((similarity, vertices, cropped_image, centroid1, min_angle_vertex1, sorted_angle_values1, sorted_angles1))
+            similarity_scores = sorted(similarity_scores, key=lambda x: x[0], reverse=True)[:top_n]
 
-    similarity_scores = sorted(similarity_scores, key=lambda x: x[0], reverse=True)[:top_n]
-
-    highest_similarity = similarity_scores[0][0] if similarity_scores else 0
-    
-    for i, (similarity, vertices, cropped_image, centroid, min_angle_vertex, sorted_angle_values, sorted_angles, w1, w2) in enumerate(similarity_scores):
-        color = get_color_for_similarity(similarity, highest_similarity)
-        if is_one_vs_one:
-            plot_image = image1.copy()
-            plot_image = plot_one_vs_one(plot_image, vertices, centroid, similarity, color)
+            highest_similarity = similarity_scores[0][0] if similarity_scores else 0
+            
+            for i, (similarity, vertices, cropped_image, centroid, min_angle_vertex, sorted_angle_values, sorted_angles) in enumerate(similarity_scores):
+                color = get_color_for_similarity(similarity, highest_similarity)
+                if is_one_vs_one:
+                    plot_image = image1.copy()
+                    plot_image = plot_one_vs_one(plot_image, vertices, centroid, similarity, color)
+                else:
+                    is_highest_similarity = (i == 0)  # Đánh dấu polygon có độ tương đồng cao nhất
+                    plot_image = image1
+                    plot_image = plot_polygon_and_circle(plot_image, vertices, centroid, similarity, color, is_highest_similarity)
         else:
-            is_highest_similarity = (i == 0)  # Đánh dấu polygon có độ tương đồng cao nhất
-            plot_image = image1
-            plot_image = plot_polygon_and_circle(plot_image, vertices, centroid, similarity, color, is_highest_similarity)
+            similarity, w1, w2 = normalize_and_compute_dtw_similarity(combined_angles1, combined_angles2)
+            similarity_scores.append((similarity, vertices, cropped_image, centroid1, min_angle_vertex1, sorted_angle_values1, sorted_angles1, w1, w2))
         
+            if progress_callback:
+                progress_callback(60)  # Update progress to 60%
+
+            similarity_scores = sorted(similarity_scores, key=lambda x: x[0], reverse=True)[:top_n]
+
+            highest_similarity = similarity_scores[0][0] if similarity_scores else 0
+            
+            for i, (similarity, vertices, cropped_image, centroid, min_angle_vertex, sorted_angle_values, sorted_angles, w1, w2) in enumerate(similarity_scores):
+                color = get_color_for_similarity(similarity, highest_similarity)
+                if is_one_vs_one:
+                    plot_image = image1.copy()
+                    plot_image = plot_one_vs_one(plot_image, vertices, centroid, similarity, color)
+                else:
+                    is_highest_similarity = (i == 0)  # Đánh dấu polygon có độ tương đồng cao nhất
+                    plot_image = image1
+                    plot_image = plot_polygon_and_circle(plot_image, vertices, centroid, similarity, color, is_highest_similarity)
+                
     if progress_callback:
         progress_callback(80)  # Update progress to 80%
         

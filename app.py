@@ -151,6 +151,16 @@ def polygon_vs_polygon():
     container = st.container(border=True)
     compare_button = st.button("Compare", type="primary", key="polygon_vs_polygon_button", use_container_width=True)
     with st.expander("Upload Images", expanded=True):
+        option = st.selectbox(
+            "Select a comparison approach",
+            ("Subarrays", "DTW"),
+        )
+        if option == "Subarrays":
+            col = st.columns(2)
+            with col[0]:
+                k1 = st.number_input("Choose the tolerance angle (Degrees)", min_value=1, max_value=50, value=5, step=1, key="cluster_vs_map_number_input")
+            with col[1]:
+                k2 = st.number_input("Choose the minimum subsequence length", min_value=2, max_value=10, value=3, step=1, key="min_subsequence_length")
         col1, col2 = st.columns(2)
         
         with col1:
@@ -187,119 +197,235 @@ def polygon_vs_polygon():
                 if image1 is None or image2 is None:
                     error_container.error("Error: One or both images could not be read.")
                 else:
-                    result_rgb, highest_similarity, similarity_scores, error_message = process_image_and_find_similar_polygons(image1, image2, top_n=1, progress_callback=None, is_one_vs_one=True)
-                    img22,_,_,_ = process_image_and_find_similar_polygons(img22,img11 , top_n=1, progress_callback=None, is_one_vs_one=True)
-                    if error_message:
-                        error_container.error(error_message)
-                    else:
-                        with container:
+                    if option == "Subarrays":
+                        result_rgb, highest_similarity, similarity_scores, error_message = process_image_and_find_similar_polygons(image1, image2, top_n=1, progress_callback=None, is_one_vs_one=True, option=option, k1=k1, k2=k2)
+                        img22,_,_,_ = process_image_and_find_similar_polygons(img22,img11 , top_n=1, progress_callback=None, is_one_vs_one=True, option=option, k1=k1, k2=k2)
+                        if error_message:
+                            error_container.error(error_message)
+                        else:
+                            with container:
+                                if highest_similarity > 1:
+                                    st.subheader("Comparison Result")
+                                    ui.badges([(f"Highest Similarity: {highest_similarity:.2f}%",'default')])
+                                    col = st.columns(2)
+                                    with col[0]:
+                                        st.image(result_rgb, caption="Polygon 1", use_column_width=True)
+                                    with col[1]:
+                                        st.image(img22, caption="Polygon 2")
+                                    with st.expander("View Explanation"):
+                                        col1, col2 = st.columns(2)
+                                        polygon1 = extract_polygons(img1)
+                                        polygon2 = extract_polygons(img2)
+                                        # vertices, centroid, min_angle_vertex, vertex_angles, sorted_angles, polygon_angles
+                                        centroid1, min_angle_vertex1, sorted_vertices1, vertex_angles1, sorted_angles1, polygon_angles1 = calculate_angles(polygon1[1][0])          
+                                        fig1, polygon_angles1, vertex_angles1 = plot_polygon_and_image(polygon1[1][0], centroid1, min_angle_vertex1, vertex_angles1, sorted_angles1, polygon_angles1)
+                                        centroid2, min_angle_vertex2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2[1][0])          
+                                        fig2, polygon_angles2, vertex_angles2 = plot_polygon_and_image(polygon2[1][0], centroid2, min_angle_vertex2, vertex_angles2, sorted_angles2, polygon_angles2)
+                                        st.code("combined_angles = np.concatenate([vertex_angles, sorted(polygon_angles)])")
+                                        value_7 = np.concatenate([vertex_angles1, sorted(polygon_angles1)])
+                                        value_8 = np.concatenate([vertex_angles2, sorted(polygon_angles2)])
 
-                            if highest_similarity > 1:
-                                st.subheader("Comparison Result")
-                                ui.badges([(f"Highest Similarity: {highest_similarity:.2f}%",'default')])
-                                col = st.columns(2)
-                                with col[0]:
-                                    st.image(result_rgb, caption="Polygon 1", use_column_width=True)
-                                with col[1]:
-                                    st.image(img22, caption="Polygon 2")
-                                with st.expander("View Explanation"):
-                                    # Display input polygons side by side
-                                    col1, col2 = st.columns(2)
-                                    value_7 = similarity_scores[0][7]
-                                    value_8 = similarity_scores[0][8]
-                                    df = pd.DataFrame({
-                                        'Polygon': [1, 2],
-                                        'Embedded vector': [value_7, value_8]
-                                    })
-                                    st.table(df)
-                                    distance, _ = fastdtw(value_7.reshape(-1, 1), value_8.reshape(-1, 1), dist=euclidean)
-                                    # ui.badges([(f"DTW Distance: {distance}",'secondary')])
-                                    st.write("DTW Distance: ",distance )
-                                    max_distance = np.linalg.norm(np.ones_like(value_7) - np.zeros_like(value_7))
-                                    st.write("Max DTW Distance: ",max_distance )
-                                    percent_similarity = max(0, (1 - (distance / max_distance)) * 100)
-                                    st.write("Percent Similarity: ",percent_similarity )
-                                    st.latex(r"""Percent Similarity = \max \left( 0, \left( 1 - \frac{\text{distance}}{\text{max\_distance}} \right) \times 100 \right)""")
-                                    # st.write()
-                                    polygon1 = extract_polygons(img1)
-                                    polygon2 = extract_polygons(img2)
-                                    # vertices, centroid, min_angle_vertex, vertex_angles, sorted_angles, polygon_angles
-                                    centroid1, min_angle_vertex1, sorted_vertices1, vertex_angles1, sorted_angles1, polygon_angles1 = calculate_angles(polygon1[1][0])          
-                                    fig1, polygon_angles1, vertex_angles1 = plot_polygon_and_image(polygon1[1][0], centroid1, min_angle_vertex1, vertex_angles1, sorted_angles1, polygon_angles1)
-                                    centroid2, min_angle_vertex2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2[1][0])          
-                                    fig2, polygon_angles2, vertex_angles2 = plot_polygon_and_image(polygon2[1][0], centroid2, min_angle_vertex2, vertex_angles2, sorted_angles2, polygon_angles2)
-                                    
-                                    with col1:
-                                        ui.badges([(f"Polygon 1",'outline')])
-                                        st.pyplot(fig1)
-                                        ui.badges([(f"Polygon Angles 1",'secondary')])
-                                        st.write(polygon_angles1)
-                                        ui.badges([(f"Vertex Angles 1",'secondary')])
-                                        st.write(vertex_angles1)
-                                        # st.write(f"{similarity_scores[0][7]}")
+                                        df = pd.DataFrame({
+                                            'Polygon': [1, 2],
+                                            'combined_angles': [value_7, value_8]
+                                        })
+                                        st.table(df)
+                                        st.markdown(
+                                        """
+                                        <h4 style='color: #2563EB;'>Enumerating Sub-arrays (denoted as SArr):</h4>
+                                        """,
+                                        unsafe_allow_html=True)
+                                        st.latex(r"""SArr(A) = \{A[i:j] \mid 0\leq i\leq j \leq |A|\}""")
+                                        st.latex(r"""SArr(B) = \{B[i:j] \mid 0\leq i\leq j \leq |B|\}""")
+                                        st.code("""def subarrays(arr):
+    result = []
+    for start in range(len(arr)):
+        for end in range(start + 1, len(arr) + 1):
+            result.append(arr[start:end])
+    return result""") 
+                                        st.markdown(
+                                        """
+                                        <h4 style='color: #2563EB;'>Checking matches:</h4>
+                                        """,
+                                        unsafe_allow_html=True)
+                                        st.latex(r"""is\_match(S_A,S_B)=\forall (a_i,b_i)\in (S_A,S_B), \mid a_i - b_i\mid<k""")
+                                        st.code("""def is_match(subA, subB):
+    if len(subA) != len(subB):
+        return False
+    return all(abs(a - b) < k for a, b in zip(subA, subB))""")
+                                        st.markdown(
+                                        """
+                                        <h4 style='color: #2563EB;'>Finding the largest match:</h4>
+                                        """,
+                                        unsafe_allow_html=True)
+                                        st.latex(r"""Largest\_Match =  \argmax_{(S_A,S_B)\in (SArr(A), SArr(B))} \{|S_A| \mid is\_match(S_A,S_B) \land |S_A|\geq k2\}""")
+                                        st.code("""def find_largest_consecutive_matches(A, B, k1, k2):
+    subarrays_A = subarrays(A)
+    subarrays_B = subarrays(B)
+    
+    largest_match = None
+    largest_match_length = 0
+
+    for subA in subarrays_A:
+        if len(subA) >= k2: 
+            for subB in subarrays_B:
+                if len(subB) == len(subA) and is_match(subA, subB):
+                    if len(subA) > largest_match_length:
+                        largest_match = (subA, subB)
+                        largest_match_length = len(subA)
+    
+    return largest_match_length""")
+                                        st.markdown(
+                                        """
+                                        <h4 style='color: #2563EB;'>Matching Percentage (P) between two Sub-Arrays:</h4>
+                                        """,
+                                        unsafe_allow_html=True)
+                                        st.latex(r"""\mathcal{P} = \Big(\frac{\mid Largest\_Match[0]\mid}{\max(|A|,|B|)}\Big)\times 100""")
+                                        st.code("""def calculate_percentage_match(A, B, k1, k2):
+    largest_match_length = find_largest_consecutive_matches(A, B, k1, k2)
+    
+    if largest_match_length == 0:
+        return 0.0
+    
+    total_length_A = len(A)
+    total_length_B = len(B)
+    
+    percentage_match = (largest_match_length / max(total_length_A, total_length_B)) * 100
+    return percentage_match""")
+                                        with col1:
+                                            ui.badges([(f"Polygon 1",'outline')])
+                                            st.pyplot(fig1)
+                                            ui.badges([(f"Polygon Angles 1",'secondary')])
+                                            st.write(polygon_angles1)
+                                            ui.badges([(f"Vertex Angles 1",'secondary')])
+                                            st.write(vertex_angles1)
+                                            # st.write(f"{similarity_scores[0][7]}")
+                                        with col2:
+                                            ui.badges([(f"Polygon 2",'outline')])
+                                            st.pyplot(fig2)
+                                            ui.badges([(f"Polygon Angles 2",'secondary')])
+                                            st.write(polygon_angles2)
+                                            ui.badges([(f"Vertex Angles 2",'secondary')])
+                                            st.write(vertex_angles2)
+                                            # st.write(similarity_scores[0][8])
                                         
-                                    with col2:
-                                        ui.badges([(f"Polygon 2",'outline')])
-                                        st.pyplot(fig2)
-                                        ui.badges([(f"Polygon Angles 2",'secondary')])
-                                        st.write(polygon_angles2)
-                                        ui.badges([(f"Vertex Angles 2",'secondary')])
-                                        st.write(vertex_angles2)
-                                        # st.write(similarity_scores[0][8])
-                                    
-                                    plt.close(fig1)  # Close the figure to free up memory
-                                    plt.close(fig2)  # Close the figure to free up memory
-                                    if len(similarity_scores) == 0:
-                                        st.write("No polygons found for explanation.")
-                            else:
-                                st.subheader("Comparison Result")
-                                ui.badges([(f"Highest Similarity: {highest_similarity:.2f}%",'default'),("Two polygons are totally different",'destructive')], class_name="flex gap-2")
-                                with st.expander("View Explanation"):
-                                    # Display input polygons side by side
-                                    col1, col2 = st.columns(2)
-                                    value_7 = similarity_scores[0][7]
-                                    value_8 = similarity_scores[0][8]
-                                    df = pd.DataFrame({
-                                        'Polygon': [1, 2],
-                                        'Embedded Vector': [value_7, value_8]
-                                    })
-                                    st.table(df)
-                                    distance, _ = fastdtw(value_7.reshape(-1, 1), value_8.reshape(-1, 1), dist=euclidean)
-                                    # ui.badges([(f"DTW Distance: {distance}",'secondary')])
-                                    st.write("DTW Distance: ",distance )
-                                    max_distance = np.linalg.norm(np.ones_like(value_7) - np.zeros_like(value_7))
-                                    st.write("Max DTW Distance: ",max_distance )
-                                    percent_similarity = max(0, (1 - (distance / max_distance)) * 100)
-                                    st.write("Percent Similarity: ",percent_similarity )
-                                    st.latex(r"""Percent Similarity = \max \left( 0, \left( 1 - \frac{\text{distance}}{\text{max\_distance}} \right) \times 100 \right)""")
-                                    polygon1 = extract_polygons(img1)
-                                    polygon2 = extract_polygons(image2)
-                                    # vertices, centroid, min_angle_vertex, vertex_angles, sorted_angles, polygon_angles
-                                    centroid1, min_angle_vertex1, sorted_vertices1, vertex_angles1, sorted_angles1, polygon_angles1 = calculate_angles(polygon1[1][0])          
-                                    fig1, polygon_angles1, vertex_angles1 = plot_polygon_and_image(polygon1[1][0], centroid1, min_angle_vertex1, vertex_angles1, sorted_angles1, polygon_angles1)
-                                    centroid2, min_angle_vertex2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2[1][0])          
-                                    fig2, polygon_angles2, vertex_angles2 = plot_polygon_and_image(polygon2[1][0], centroid2, min_angle_vertex2, vertex_angles2, sorted_angles2, polygon_angles2)
-                                    
-                                    with col1:
-                                        ui.badges([(f"Polygon 1",'outline')])
-                                        st.pyplot(fig1)
-                                        ui.badges([(f"Polygon Angles 1",'secondary')])
-                                        st.write(polygon_angles1)
-                                        ui.badges([(f"Vertex Angles 1",'secondary')])
-                                        st.write(vertex_angles1)
+                                        plt.close(fig1)  # Close the figure to free up memory
+                                        plt.close(fig2)  # Close the figure to free up memory
+                                        if len(similarity_scores) == 0:
+                                            st.write("No polygons found for explanation.")
+                    else:
+                        result_rgb, highest_similarity, similarity_scores, error_message = process_image_and_find_similar_polygons(image1, image2, top_n=1, progress_callback=None, is_one_vs_one=True, option=option)
+                        img22,_,_,_ = process_image_and_find_similar_polygons(img22,img11 , top_n=1, progress_callback=None, is_one_vs_one=True, option=option)
+                        if error_message:
+                            error_container.error(error_message)
+                        else:
+                            with container:
+                                if highest_similarity > 1:
+                                    st.subheader("Comparison Result")
+                                    ui.badges([(f"Highest Similarity: {highest_similarity:.2f}%",'default')])
+                                    col = st.columns(2)
+                                    with col[0]:
+                                        st.image(result_rgb, caption="Polygon 1", use_column_width=True)
+                                    with col[1]:
+                                        st.image(img22, caption="Polygon 2")
+                                    with st.expander("View Explanation"):
+                                        # Display input polygons side by side
+                                        col1, col2 = st.columns(2)
+                                        value_7 = similarity_scores[0][7]
+                                        value_8 = similarity_scores[0][8]
+                                        df = pd.DataFrame({
+                                            'Polygon': [1, 2],
+                                            'Embedded vector': [value_7, value_8]
+                                        })
+                                        st.table(df)
+                                        distance, _ = fastdtw(value_7.reshape(-1, 1), value_8.reshape(-1, 1), dist=euclidean)
+                                        # ui.badges([(f"DTW Distance: {distance}",'secondary')])
+                                        st.write("DTW Distance: ",distance )
+                                        max_distance = np.linalg.norm(np.ones_like(value_7) - np.zeros_like(value_7))
+                                        st.write("Max DTW Distance: ",max_distance )
+                                        percent_similarity = max(0, (1 - (distance / max_distance)) * 100)
+                                        st.write("Percent Similarity: ",percent_similarity )
+                                        st.latex(r"""Percent Similarity = \max \left( 0, \left( 1 - \frac{\text{distance}}{\text{max\_distance}} \right) \times 100 \right)""")
+                                        # st.write()
+                                        polygon1 = extract_polygons(img1)
+                                        polygon2 = extract_polygons(img2)
+                                        # vertices, centroid, min_angle_vertex, vertex_angles, sorted_angles, polygon_angles
+                                        centroid1, min_angle_vertex1, sorted_vertices1, vertex_angles1, sorted_angles1, polygon_angles1 = calculate_angles(polygon1[1][0])          
+                                        fig1, polygon_angles1, vertex_angles1 = plot_polygon_and_image(polygon1[1][0], centroid1, min_angle_vertex1, vertex_angles1, sorted_angles1, polygon_angles1)
+                                        centroid2, min_angle_vertex2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2[1][0])          
+                                        fig2, polygon_angles2, vertex_angles2 = plot_polygon_and_image(polygon2[1][0], centroid2, min_angle_vertex2, vertex_angles2, sorted_angles2, polygon_angles2)
                                         
-                                    with col2:
-                                        ui.badges([(f"Polygon 2",'outline')])
-                                        st.pyplot(fig2)
-                                        ui.badges([(f"Polygon Angles 2",'secondary')])
-                                        st.write(polygon_angles2)
-                                        ui.badges([(f"Vertex Angles 2",'secondary')])
-                                        st.write(vertex_angles2)
+                                        with col1:
+                                            ui.badges([(f"Polygon 1",'outline')])
+                                            st.pyplot(fig1)
+                                            ui.badges([(f"Polygon Angles 1",'secondary')])
+                                            st.write(polygon_angles1)
+                                            ui.badges([(f"Vertex Angles 1",'secondary')])
+                                            st.write(vertex_angles1)
+                                            # st.write(f"{similarity_scores[0][7]}")
+                                            
+                                        with col2:
+                                            ui.badges([(f"Polygon 2",'outline')])
+                                            st.pyplot(fig2)
+                                            ui.badges([(f"Polygon Angles 2",'secondary')])
+                                            st.write(polygon_angles2)
+                                            ui.badges([(f"Vertex Angles 2",'secondary')])
+                                            st.write(vertex_angles2)
+                                            # st.write(similarity_scores[0][8])
                                         
-                                    plt.close(fig1)  # Close the figure to free up memory
-                                    plt.close(fig2)  # Close the figure to free up memory
-                                    if len(similarity_scores) == 0:
-                                        st.write("No polygons found for explanation.")
+                                        plt.close(fig1)  # Close the figure to free up memory
+                                        plt.close(fig2)  # Close the figure to free up memory
+                                        if len(similarity_scores) == 0:
+                                            st.write("No polygons found for explanation.")
+                                else:
+                                    st.subheader("Comparison Result")
+                                    ui.badges([(f"Highest Similarity: {highest_similarity:.2f}%",'default'),("Two polygons are totally different",'destructive')], class_name="flex gap-2")
+                                    with st.expander("View Explanation"):
+                                        # Display input polygons side by side
+                                        col1, col2 = st.columns(2)
+                                        value_7 = similarity_scores[0][7]
+                                        value_8 = similarity_scores[0][8]
+                                        df = pd.DataFrame({
+                                            'Polygon': [1, 2],
+                                            'Embedded Vector': [value_7, value_8]
+                                        })
+                                        st.table(df)
+                                        distance, _ = fastdtw(value_7.reshape(-1, 1), value_8.reshape(-1, 1), dist=euclidean)
+                                        # ui.badges([(f"DTW Distance: {distance}",'secondary')])
+                                        st.write("DTW Distance: ",distance )
+                                        max_distance = np.linalg.norm(np.ones_like(value_7) - np.zeros_like(value_7))
+                                        st.write("Max DTW Distance: ",max_distance )
+                                        percent_similarity = max(0, (1 - (distance / max_distance)) * 100)
+                                        st.write("Percent Similarity: ",percent_similarity )
+                                        st.latex(r"""Percent Similarity = \max \left( 0, \left( 1 - \frac{\text{distance}}{\text{max\_distance}} \right) \times 100 \right)""")
+                                        polygon1 = extract_polygons(img1)
+                                        polygon2 = extract_polygons(image2)
+                                        # vertices, centroid, min_angle_vertex, vertex_angles, sorted_angles, polygon_angles
+                                        centroid1, min_angle_vertex1, sorted_vertices1, vertex_angles1, sorted_angles1, polygon_angles1 = calculate_angles(polygon1[1][0])          
+                                        fig1, polygon_angles1, vertex_angles1 = plot_polygon_and_image(polygon1[1][0], centroid1, min_angle_vertex1, vertex_angles1, sorted_angles1, polygon_angles1)
+                                        centroid2, min_angle_vertex2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2[1][0])          
+                                        fig2, polygon_angles2, vertex_angles2 = plot_polygon_and_image(polygon2[1][0], centroid2, min_angle_vertex2, vertex_angles2, sorted_angles2, polygon_angles2)
+                                        
+                                        with col1:
+                                            ui.badges([(f"Polygon 1",'outline')])
+                                            st.pyplot(fig1)
+                                            ui.badges([(f"Polygon Angles 1",'secondary')])
+                                            st.write(polygon_angles1)
+                                            ui.badges([(f"Vertex Angles 1",'secondary')])
+                                            st.write(vertex_angles1)
+                                            
+                                        with col2:
+                                            ui.badges([(f"Polygon 2",'outline')])
+                                            st.pyplot(fig2)
+                                            ui.badges([(f"Polygon Angles 2",'secondary')])
+                                            st.write(polygon_angles2)
+                                            ui.badges([(f"Vertex Angles 2",'secondary')])
+                                            st.write(vertex_angles2)
+                                            
+                                        plt.close(fig1)  # Close the figure to free up memory
+                                        plt.close(fig2)  # Close the figure to free up memory
+                                        if len(similarity_scores) == 0:
+                                            st.write("No polygons found for explanation.")
 def polygon_vs_map():
     # st.subheader("Polygon vs Map 🗺️")
     error_container = st.empty()  # Placeholder for error messages
