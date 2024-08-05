@@ -263,7 +263,7 @@ def process_image_and_find_similar_polygons_2(image1, image2, top_n=1, progress_
         combined_angles1 = np.concatenate([sorted(sorted_angle_values1), sorted(polygon_angles1)])
         
         if option == "Subarrays":
-            for combined_angles2 in combined_angles2_list:
+            for combined_angles2 in combined_angles2_list[1:]:  # Skip the first element
                 similarity = calculate_percentage_match(combined_angles1, combined_angles2, k1, k2)
                 similarity_scores.append((similarity, vertices, cropped_image, centroid1, min_angle_vertex1, sorted_angle_values1, sorted_angles1))
                 
@@ -281,6 +281,7 @@ def process_image_and_find_similar_polygons_2(image1, image2, top_n=1, progress_
         progress_callback(100)  # Update progress to 100%
     
     return result_rgb, highest_similarity, similarity_scores, error_message
+
 
 def process_image_and_find_similar_polygons(image1, image2, top_n=1, progress_callback=None, is_one_vs_one=False, compare_mode="polygon_vs_polygon", option="Subarrays", k1=5, k2=3):
     if progress_callback:
