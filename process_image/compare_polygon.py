@@ -233,8 +233,56 @@ def calculate_percentage_match(A, B, k1, k2):
     return percentage_match
 
 #----------------------------------------------------------------------
+def process_image_and_find_similar_polygons_2(image1, image2, top_n=1, progress_callback=None, is_one_vs_one=False, compare_mode="polygon_vs_polygon", option="Subarrays", k1=5, k2=3):
+    if progress_callback:
+        progress_callback(1)  # Update progress to 1%
+    # Extract polygons
+    polygons1 = extract_polygons(image1)
+    if progress_callback:
+        progress_callback(20)  # Update progress to 20%
+        
+    polygons2 = extract_polygons(image2)
+    if progress_callback:
+        progress_callback(40)  # Update progress to 40%
+        
+    # Validate input
+    is_valid, error_message = validate_input(polygons1, polygons2, compare_mode)
+    if not is_valid:
+        return None, 0, [], error_message
+    
+    combined_angles2_list = []
+    for i, (vertices, cropped_image) in enumerate(polygons2):
+        centroid2, min_angle_vertex2, sorted_vertices2, sorted_angle_values2, sorted_angles2, polygon_angles2 = calculate_angles(vertices)
+        combined_angles2 = np.concatenate([sorted(sorted_angle_values2), sorted(polygon_angles2)])
+        combined_angles2_list.append(combined_angles2)
 
-def process_image_and_find_similar_polygons(image1, image2, top_n=5, progress_callback=None, is_one_vs_one=False, compare_mode="polygon_vs_polygon", option="Subarrays", k1=5, k2=3):
+    similarity_scores = []
+    img1 = image1.copy()
+    for i, (vertices, cropped_image) in enumerate(polygons1):
+        centroid1, min_angle_vertex1, sorted_vertices1, sorted_angle_values1, sorted_angles1, polygon_angles1 = calculate_angles(vertices)
+        combined_angles1 = np.concatenate([sorted(sorted_angle_values1), sorted(polygon_angles1)])
+        
+        if option == "Subarrays":
+            for combined_angles2 in combined_angles2_list:
+                similarity = calculate_percentage_match(combined_angles1, combined_angles2, k1, k2)
+                similarity_scores.append((similarity, vertices, cropped_image, centroid1, min_angle_vertex1, sorted_angle_values1, sorted_angles1))
+                
+    similarity_scores = sorted(similarity_scores, key=lambda x: x[0], reverse=True)[:top_n]
+    highest_similarity = similarity_scores[0][0] if similarity_scores else 0
+    
+    for i, (similarity, vertices, cropped_image, centroid, min_angle_vertex, sorted_angle_values, sorted_angles) in enumerate(similarity_scores):
+        color = get_color_for_similarity(similarity, highest_similarity)
+        is_highest_similarity = (i == 0)
+        img1 = plot_polygon_and_circle(img1, vertices, centroid, similarity, color, is_highest_similarity)
+    
+    result_rgb = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
+    
+    if progress_callback:
+        progress_callback(100)  # Update progress to 100%
+    
+    return result_rgb, highest_similarity, similarity_scores, error_message
+
+def process_image_and_find_similar_polygons(image1, image2, top_n=1, progress_callback=None, is_one_vs_one=False, compare_mode="polygon_vs_polygon", option="Subarrays", k1=5, k2=3):
     if progress_callback:
         progress_callback(1)  # Update progress to 1%
     # Extract polygons
@@ -257,7 +305,7 @@ def process_image_and_find_similar_polygons(image1, image2, top_n=5, progress_ca
         combined_angles2 = np.concatenate([sorted(sorted_angle_values2), sorted(polygon_angles2)])
 
     similarity_scores = []
-
+    img1 = image1.copy()
     for i, (vertices, cropped_image) in enumerate(polygons1):
         centroid1, min_angle_vertex1, sorted_vertices1, sorted_angle_values1, sorted_angles1, polygon_angles1 = calculate_angles(vertices)
         combined_angles1 = np.concatenate([sorted(sorted_angle_values1), sorted(polygon_angles1)])
@@ -271,12 +319,14 @@ def process_image_and_find_similar_polygons(image1, image2, top_n=5, progress_ca
             for i, (similarity, vertices, cropped_image, centroid, min_angle_vertex, sorted_angle_values, sorted_angles) in enumerate(similarity_scores):
                 color = get_color_for_similarity(similarity, highest_similarity)
                 if is_one_vs_one:
-                    plot_image = image1.copy()
-                    plot_image = plot_one_vs_one(plot_image, vertices, centroid, similarity, color)
+                    plot_image_1 = image1.copy()
+                    plot_image_1 = plot_one_vs_one(plot_image_1, vertices, centroid, similarity, color)
                 else:
                     is_highest_similarity = (i == 0)  # Đánh dấu polygon có độ tương đồng cao nhất
-                    plot_image = image1
-                    plot_image = plot_polygon_and_circle(plot_image, vertices, centroid, similarity, color, is_highest_similarity)
+                    plot_image_1 = image1
+                    plot_image_1 = plot_polygon_and_circle(plot_image_1, vertices, centroid, similarity, color, is_highest_similarity)
+            result_rgb = cv2.cvtColor(plot_image_1, cv2.COLOR_BGR2RGB)    
+        
         else:
             similarity, w1, w2 = normalize_and_compute_dtw_similarity(combined_angles1, combined_angles2)
             similarity_scores.append((similarity, vertices, cropped_image, centroid1, min_angle_vertex1, sorted_angle_values1, sorted_angles1, w1, w2))
@@ -291,18 +341,19 @@ def process_image_and_find_similar_polygons(image1, image2, top_n=5, progress_ca
             for i, (similarity, vertices, cropped_image, centroid, min_angle_vertex, sorted_angle_values, sorted_angles, w1, w2) in enumerate(similarity_scores):
                 color = get_color_for_similarity(similarity, highest_similarity)
                 if is_one_vs_one:
-                    plot_image = image1.copy()
-                    plot_image = plot_one_vs_one(plot_image, vertices, centroid, similarity, color)
+                    plot_image_2 = img1.copy()
+                    plot_image_2 = plot_one_vs_one(plot_image_2, vertices, centroid, similarity, color)
                 else:
                     is_highest_similarity = (i == 0)  # Đánh dấu polygon có độ tương đồng cao nhất
-                    plot_image = image1
-                    plot_image = plot_polygon_and_circle(plot_image, vertices, centroid, similarity, color, is_highest_similarity)
-                
+                    plot_image_2 = img1
+                    plot_image_2 = plot_polygon_and_circle(plot_image_2, vertices, centroid, similarity, color, is_highest_similarity)
+            result_rgb = cv2.cvtColor(plot_image_2, cv2.COLOR_BGR2RGB)    
     if progress_callback:
         progress_callback(80)  # Update progress to 80%
         
     # Convert the result image to RGB format
-    result_rgb = cv2.cvtColor(plot_image, cv2.COLOR_BGR2RGB)
+    
+    
     
     if progress_callback:
         progress_callback(100)  # Update progress to 100%

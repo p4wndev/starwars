@@ -2,7 +2,7 @@ import streamlit as st
 import cv2
 import numpy as np
 from PIL import Image
-from process_image.compare_polygon import process_image_and_find_similar_polygons, compare_maps, plot_polygon_and_image, extract_polygons, calculate_angles
+from process_image.compare_polygon import process_image_and_find_similar_polygons, process_image_and_find_similar_polygons_2, compare_maps, plot_polygon_and_image, extract_polygons, calculate_angles
 from process_image.compare_cluster import process_image_and_find_similar_cluster, process_cluster, display_results, compare_images_knn, plot_matching_clusters_knn
 import io, base64
 import os
@@ -158,9 +158,9 @@ def polygon_vs_polygon():
         if option == "Subarrays":
             col = st.columns(2)
             with col[0]:
-                k1 = st.number_input("Choose the tolerance angle (Degrees)", min_value=1, max_value=50, value=5, step=1, key="cluster_vs_map_number_input")
+                k1 = st.number_input("Choose the tolerance angle (Degrees)", min_value=1, max_value=50, value=5, step=1, key="polygon_vs_polygon_number_input")
             with col[1]:
-                k2 = st.number_input("Choose the minimum subsequence length", min_value=2, max_value=10, value=3, step=1, key="min_subsequence_length")
+                k2 = st.number_input("Choose the minimum subsequence length", min_value=2, max_value=50, value=3, step=1, key="min_subsequence_length")
         col1, col2 = st.columns(2)
         
         with col1:
@@ -433,7 +433,22 @@ def polygon_vs_map():
     
     compare_button = st.button("Compare", type="primary", key="polygon_vs_map_button",use_container_width=True)
     with st.expander("Upload Images", expanded=True):
-        top_n = st.select_slider("Select top N for comparison", options=[1, 2, 3, 4, 5], value=1, key="polygon_vs_map_slider")
+        option = st.selectbox(
+            "Select a comparison approach",
+            ("Subarrays", "DTW"),
+        )
+        if option == "Subarrays":
+            col = st.columns(3)
+            with col[0]:
+                k1 = st.number_input("Tolerance angle (Degrees)", min_value=1, max_value=50, value=5, step=1, key="polygon_vs_map_number_input")
+            with col[1]:
+                k2 = st.number_input("Minimum subsequence length", min_value=2, max_value=50, value=3, step=1, key="min_subsequence_length_2")
+            with col[2]:
+                top_n_1 = st.number_input("Select top N for comparison", min_value=1, max_value=10, value=1, step=1, key="polygon_vs_map_slider")
+        
+        # top_n = st.select_slider("Select top N for comparison", options=[1, 2, 3, 4, 5], value=1, key="polygon_vs_map_slider")
+        if option == "DTW":
+            top_n_2 = st.number_input("Select top N for comparison", min_value=1, max_value=10, value=1, step=1, key="polygon_vs_map_slider_2")
         col1, col2 = st.columns(2)
         
         with col1:
@@ -471,11 +486,14 @@ def polygon_vs_map():
 
                     def update_progress(progress):
                         my_bar.progress(progress, text=progress_text)
-
-                    result, highest_similarity, similarity_scores, error_message = process_image_and_find_similar_polygons(
-                        uploaded_file2_image, uploaded_file1_image, top_n, progress_callback=update_progress, compare_mode="polygon_vs_map"
-                    )
-                    
+                    if option == "Subarrays":
+                        result, highest_similarity, similarity_scores, error_message = process_image_and_find_similar_polygons_2(
+                            uploaded_file2_image, uploaded_file1_image,top_n_1, progress_callback=update_progress, compare_mode="polygon_vs_map", option=option, k1=k1, k2=k2
+                        )
+                    else:
+                        result, highest_similarity, similarity_scores, error_message = process_image_and_find_similar_polygons(
+                            uploaded_file2_image, uploaded_file1_image,top_n_2, progress_callback=update_progress, compare_mode="polygon_vs_map", option=option
+                        )
                     if error_message:
                         error_container.error(error_message)
                     else:
