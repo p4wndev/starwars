@@ -25,12 +25,6 @@ def crop_polygon_from_image(image, vertices):
     cropped = result[y:y+h, x:x+w]
     return cropped
 
-# def remove_white_pixels(image, threshold=240):
-#     white_mask = cv2.inRange(image, np.array([threshold, threshold, threshold]), np.array([255, 255, 255]))
-#     non_white_mask = cv2.bitwise_not(white_mask)
-#     result = cv2.bitwise_and(image, image, mask=non_white_mask)
-#     return result
-
 def remove_white_pixels(image, threshold=240):
     if len(image.shape) == 2:  # Grayscale image
         white_mask = cv2.inRange(image, threshold, 255)
@@ -72,8 +66,42 @@ def compute_centroid(vertices):
 
     return C_x, C_y
 
+# def extract_polygons(image, min_vertices=3, max_area=100000):
+#     image = np.array(image)
+#     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+#     ret, thresh = cv2.threshold(gray, 200, 255, 0)
+#     contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+#     polygons = []
+#     for cnt in contours:
+#         approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+#         if len(approx) >= min_vertices:
+#             flattened_vertices = [tuple(coord[0]) for coord in approx]
+#             area = polygon_area(flattened_vertices)
+#             if area < max_area:
+#                 cropped_image = crop_polygon_from_image(image, flattened_vertices)
+#                 cropped_image = remove_white_pixels(cropped_image, 100)
+#                 polygons.append((flattened_vertices, cropped_image))
+#     return polygons
+
 def extract_polygons(image, min_vertices=3, max_area=100000):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image = np.array(image)
+
+    # Check the number of channels in the image
+    if len(image.shape) == 2:  # Grayscale image (single channel)
+        gray = image
+    elif image.shape[2] == 3:  # BGR image (3 channels)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    elif image.shape[2] == 4:  # RGBA image (4 channels)
+        image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    else:
+        raise ValueError("Unexpected number of channels in input image")
+
+    # Ensure the image is of type uint8
+    if gray.dtype != np.uint8:
+        gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
     ret, thresh = cv2.threshold(gray, 200, 255, 0)
     contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
