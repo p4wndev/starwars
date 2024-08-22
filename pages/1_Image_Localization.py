@@ -49,12 +49,12 @@ def load_super_resolution_model(model_path, scale):
     sr.readModel(model_path)
     sr.setModel("fsrcnn", scale)
     return sr
-
+# C:\Users\VTOS\Desktop\STARWAR\models\polygon_classification\mobilenet\best_mobinet_polygon_classification.tflite
 # Paths to the models
 current_dir = os.path.dirname(__file__)
-polygon_model_path = os.path.join(current_dir[:-6], "models/polygon_classification/mobilenet/", "mobilenet_polygon_classification.h5")
+polygon_model_path = os.path.join(current_dir[:-6], "models/polygon_classification/mobilenet/", "best_mobinet_polygon_classification.h5")
 sr_model_path = os.path.join(current_dir[:-6], "models/upscale/", "FSRCNN-small_x4.pb")
-interpreter_path = os.path.join(current_dir[:-6], "models/polygon_classification/mobilenet/", "mobilenet_polygon_classification.tflite")
+interpreter_path = os.path.join(current_dir[:-6], "models/polygon_classification/mobilenet/", "best_mobinet_polygon_classification.tflite")
 
 # Load the models
 model = load_cached_model(polygon_model_path)
