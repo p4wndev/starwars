@@ -5,7 +5,7 @@
     "codespaces": {
       "openFiles": [
         "README.md",
-        "app.py"
+        "Geospatial_Comparisons.py"
       ]
     },
     "vscode": {
@@ -17,7 +17,7 @@
     }
   },
   "updateContentCommand": "sudo apt-get update && sudo apt-get install -y libgl1-mesa-glx",
-  "postCreateCommand": "pip3 install --user -r requirements.txt && pip3 install --user streamlit",
+  "postCreateCommand": "pip3 install --user -r requirements.txt && pip3 install --user streamlit && ldconfig -p | grep libGL",
   "postAttachCommand": {
     "server": "streamlit run Geospatial_Comparisons.py --server.enableCORS false --server.enableXsrfProtection false"
   },
