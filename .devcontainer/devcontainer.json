@@ -16,6 +16,7 @@
       ]
     }
   },
+  "updateContentCommand": "sudo apt-get update && sudo apt-get install -y libgl1-mesa-glx libgl1",
   "postCreateCommand": "pip3 install --user -r requirements.txt && pip3 install --user streamlit && ldconfig -p | grep libGL",
   "postAttachCommand": {
     "server": "streamlit run Geospatial_Comparisons.py --server.enableCORS false --server.enableXsrfProtection false"
