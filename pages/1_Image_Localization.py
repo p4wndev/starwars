@@ -43,12 +43,12 @@ def load_cached_model(model_path):
     return model
 
 # Cache the Super Resolution model
-@st.cache_resource
-def load_super_resolution_model(model_path, scale):
-    sr = cv2.dnn_superres.DnnSuperResImpl_create()
-    sr.readModel(model_path)
-    sr.setModel("fsrcnn", scale)
-    return sr
+# @st.cache_resource
+# def load_super_resolution_model(model_path, scale):
+#     sr = cv2.dnn_superres.DnnSuperResImpl_create()
+#     sr.readModel(model_path)
+#     sr.setModel("fsrcnn", scale)
+#     return sr
 # C:\Users\VTOS\Desktop\STARWAR\models\polygon_classification\mobilenet\best_mobinet_polygon_classification.tflite
 # Paths to the models
 current_dir = os.path.dirname(__file__)
@@ -58,7 +58,7 @@ interpreter_path = os.path.join(current_dir[:-6], "models/polygon_classification
 
 # Load the models
 model = load_cached_model(polygon_model_path)
-sr = load_super_resolution_model(sr_model_path, 4)
+# sr = load_super_resolution_model(sr_model_path, 4)
 interpreter = load_tflite_model(interpreter_path)
 
 
@@ -216,7 +216,8 @@ def main():
         # Nút bấm để thực hiện cắt ảnh
         if st.sidebar.button("Create Search Windows"):
             if upscale:
-                st.session_state.windows = detect_windows_and_upscale(image, window_size, stride, sr)
+                # st.session_state.windows = detect_windows_and_upscale(image, window_size, stride, sr)
+                st.session_state.windows = detect_windows(image, window_size, stride)
             else:
                 st.session_state.windows = detect_windows(image, window_size, stride)
         if st.session_state.windows:
@@ -255,7 +256,7 @@ def main():
             image2 = read_image_2(uploaded_image)
             if image2.shape[2] == 4:
                 image2 = cv2.cvtColor(image2, cv2.COLOR_BGRA2BGR)
-            image2 = sr.upsample(image2)
+            # image2 = sr.upsample(image2)
         search_button = st.button("Search")
     if search_button and image2 is not None:
         # So sánh ảnh tìm kiếm với các cửa sổ trong ảnh tải lên
