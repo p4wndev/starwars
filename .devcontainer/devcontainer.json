@@ -17,7 +17,7 @@
     }
   },
   "updateContentCommand": "sudo apt-get update && sudo apt-get install -y libgl1-mesa-glx libgl1",
-  "postCreateCommand": "pip3 install --user -r requirements.txt && pip3 install --user streamlit && ldconfig -p | grep libGL && pip3 install --user --upgrade opencv-contrib-python",
+  "postCreateCommand": "pip3 install --user -r requirements.txt && pip3 install --user streamlit && ldconfig -p | grep libGL && pip3 --user uninstall opencv-python && pip3 install --user --upgrade opencv-contrib-python",
   "postAttachCommand": {
     "server": "streamlit run Geospatial_Comparisons.py --server.enableCORS false --server.enableXsrfProtection false"
   },
