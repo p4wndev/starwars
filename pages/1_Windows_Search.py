@@ -65,7 +65,7 @@ sample_input_4_path = os.path.join(current_dir[:-6], "images/", "sample_input_4.
 sample_input_5_path = os.path.join(current_dir[:-6], "images/", "sample_input_5.jpg")
 # Load the models
 model = load_cached_model(polygon_model_path)
-sr = load_super_resolution_model(sr_model_path, 4)
+sr = load_super_resolution_model(sr_model_path, 3)
 interpreter = load_tflite_model(interpreter_path)
 
 
