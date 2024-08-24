@@ -156,7 +156,7 @@ def preprocess_sample_windows():
     if image.shape[2] == 4:
         image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
     try:
-        windows = detect_windows_and_upscale(image, (500, 500), 300, sr)
+        windows = detect_windows(image, (500, 500), 300, sr)
     except Exception as e:
         st.error(f"Error in detect_windows_and_upscale: {e}")
         windows = detect_windows(image, (500, 500), 300)  # Fallback to non-upscaled version
