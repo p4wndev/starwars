@@ -55,7 +55,7 @@ def load_super_resolution_model(model_path, scale):
 # Paths to the models
 current_dir = os.path.dirname(__file__)
 polygon_model_path = os.path.join(current_dir[:-6], "models/polygon_classification/mobilenet/", "best_mobinet_polygon_classification.h5")
-sr_model_path = os.path.join(current_dir[:-6], "models/upscale/", "FSRCNN-small_x4.pb")
+sr_model_path = os.path.join(current_dir[:-6], "models/upscale/", "FSRCNN-small_x3.pb")
 interpreter_path = os.path.join(current_dir[:-6], "models/polygon_classification/mobilenet/", "best_mobinet_polygon_classification.tflite")
 sample_map_path = os.path.join(current_dir[:-6], "images/", "shapefile_low.png")
 sample_input_1_path = os.path.join(current_dir[:-6], "images/", "sample_input_1.jpg")
