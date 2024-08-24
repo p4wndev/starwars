@@ -16,7 +16,7 @@
       ]
     }
   },
-  "updateContentCommand": "if command -v apt-get &> /dev/null; then sudo apt-get update && sudo apt-get install -y libgl1-mesa-glx libgl1; elif command -v yum &> /dev/null; then sudo yum update -y && sudo yum install -y mesa-libGL; elif command -v apk &> /dev/null; then sudo apk update && sudo apk add --no-cache libgl mesa-gl; fi",
+  "updateContentCommand": "sudo apt-get update && sudo apt-get install -y libgl1-mesa-glx libglib2.0-0 libsm6 libxrender1 libxext6",
   "postCreateCommand": "pip3 install --user -r requirements.txt && pip3 install --user streamlit && pip3 uninstall -y opencv-python && pip3 install --user --upgrade opencv-contrib-python",
   "postAttachCommand": {
     "server": "streamlit run Geospatial_Comparisons.py --server.enableCORS false --server.enableXsrfProtection false"
