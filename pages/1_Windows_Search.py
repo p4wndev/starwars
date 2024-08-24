@@ -57,7 +57,7 @@ current_dir = os.path.dirname(__file__)
 polygon_model_path = os.path.join(current_dir[:-6], "models/polygon_classification/mobilenet/", "best_mobinet_polygon_classification.h5")
 sr_model_path = os.path.join(current_dir[:-6], "models/upscale/", "FSRCNN-small_x4.pb")
 interpreter_path = os.path.join(current_dir[:-6], "models/polygon_classification/mobilenet/", "best_mobinet_polygon_classification.tflite")
-sample_map_path = os.path.join(current_dir[:-6], "images/", "shapefile_medium.png")
+sample_map_path = os.path.join(current_dir[:-6], "images/", "shapefile_low.png")
 sample_input_1_path = os.path.join(current_dir[:-6], "images/", "sample_input_1.jpg")
 sample_input_2_path = os.path.join(current_dir[:-6], "images/", "sample_input_2.jpg")
 sample_input_3_path = os.path.join(current_dir[:-6], "images/", "sample_input_3.jpg")
@@ -151,7 +151,7 @@ def preprocess_sample_windows():
     image_plot = np.array(image)
     if image.shape[2] == 4:
         image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
-    windows = detect_windows(image, (1000, 1000), 600) 
+    windows = detect_windows_and_upscale(image, (500, 500), 300, sr) 
     return windows, image_plot
 
 SAMPLE_WINDOWS, IMAGE_PLOT = preprocess_sample_windows()
@@ -245,8 +245,8 @@ def main():
             sample_image = cv2.cvtColor(sample_image, cv2.COLOR_BGRA2BGR)
         image_plot = IMAGE_PLOT
         image2 = sample_image
-        window_size = (1000,1000)
-        stride = 600
+        window_size = (500,500)
+        stride = 300
         
     st.sidebar.link_button("Download sample map", "https://drive.google.com/file/d/1x610cvzhqdc9s5MoJKkWmY-ljHKQ5Ud3/view?usp=sharing")
     uploaded_file = st.sidebar.file_uploader("Upload an map image", type=["jpg", "jpeg", "png"], key="map_uploader")
