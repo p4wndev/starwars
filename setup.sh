@@ -26,3 +26,5 @@ python3 -c "import cv2; print(cv2.__version__)"
 
 # Kiểm tra OpenGL
 glxinfo | grep "OpenGL version"
+
+streamlit run Geospatial_Comparisons.py
