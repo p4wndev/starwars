@@ -92,36 +92,37 @@ def detect_windows(image, window_size, stride):
     return windows
 
 def detect_windows_and_upscale(image, window_size, stride, sr):
-
-    # Đọc tấm hình
-    # image = cv2.imread(image_path)
-    # if image.shape[2] == 4:
-    #     image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
-    # Kiểm tra nếu tấm hình không tồn tại
     if image is None:
         print(f"Could not read the image")
         return None
 
-    windows = []  # Danh sách để lưu trữ các cửa sổ
+    # Chuyển đổi ảnh sang BGR nếu nó là BGRA
+    if image.shape[2] == 4:
+        image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+
+    windows = []
 
     if image.shape[0] <= window_size[1] or image.shape[1] <= window_size[0]:
         print("Size of image < window size")
         return None
 
-    # Duyệt qua tấm hình và dịch chuyển cửa sổ
     for y in range(0, image.shape[0] - window_size[1] + 1, stride):
-        row = []  # Dòng của bảng để lưu các cửa sổ
+        row = []
         for x in range(0, image.shape[1] - window_size[0] + 1, stride):
-            # Lấy ra cửa sổ từ tấm hình
             window = image[y:y + window_size[1], x:x + window_size[0]]
-
-            # Upscale the window using the sr.upsample() method
-            upscaled_window = sr.upsample(window)
-
-            # Thêm cửa sổ đã upscale vào danh sách
+            
+            # Đảm bảo window có 3 kênh màu
+            if window.shape[2] != 3:
+                window = cv2.cvtColor(window, cv2.COLOR_BGRA2BGR)
+            
+            # Thử catch lỗi khi upsample
+            try:
+                upscaled_window = sr.upsample(window)
+            except Exception as e:
+                print(f"Error upscaling window at ({x}, {y}): {e}")
+                upscaled_window = window  # Sử dụng window gốc nếu upscale thất bại
+            
             row.append(upscaled_window)
-
-        # Thêm dòng vào bảng
         windows.append(row)
 
     return windows
@@ -149,9 +150,16 @@ def preprocess_sample_windows():
     image_path = sample_map_path
     image = cv2.imread(image_path)
     image_plot = np.array(image)
+    if image is None:
+        st.error(f"Could not read image from {image_path}")
+        return None, None
     if image.shape[2] == 4:
         image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
-    windows = detect_windows_and_upscale(image, (500, 500), 300, sr) 
+    try:
+        windows = detect_windows_and_upscale(image, (500, 500), 300, sr)
+    except Exception as e:
+        st.error(f"Error in detect_windows_and_upscale: {e}")
+        windows = detect_windows(image, (500, 500), 300)  # Fallback to non-upscaled version
     return windows, image_plot
 
 SAMPLE_WINDOWS, IMAGE_PLOT = preprocess_sample_windows()
