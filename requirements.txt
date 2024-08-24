@@ -30,7 +30,7 @@ MarkupSafe==2.1.5
 matplotlib
 mdurl==0.1.2
 more-itertools==10.3.0
-numpy==1.26.4
+numpy
 packaging==24.1
 pandas==2.2.2
 pillow==10.4.0
