@@ -264,8 +264,8 @@ def main():
         # Nút bấm để thực hiện cắt ảnh
         if st.sidebar.button("Create Search Windows"):
             if upscale:
-                st.session_state.windows = detect_windows_and_upscale(image, window_size, stride, sr)
-                # st.session_state.windows = detect_windows(image, window_size, stride)
+                # st.session_state.windows = detect_windows_and_upscale(image, window_size, stride, sr)
+                st.session_state.windows = detect_windows(image, window_size, stride)
             else:
                 st.session_state.windows = detect_windows(image, window_size, stride)
         if st.session_state.windows:
@@ -304,7 +304,7 @@ def main():
             image2 = read_image_2(uploaded_image)
             if image2.shape[2] == 4:
                 image2 = cv2.cvtColor(image2, cv2.COLOR_BGRA2BGR)
-            image2 = sr.upsample(image2)
+            # image2 = sr.upsample(image2)
         search_button = st.button("Search")
     if (search_button and image2 is not None) or (search_sample and image2 is not None):
         # So sánh ảnh tìm kiếm với các cửa sổ trong ảnh tải lên
