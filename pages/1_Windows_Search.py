@@ -44,12 +44,12 @@ def load_cached_model(model_path):
     return model
 
 # Cache the Super Resolution model
-# @st.cache_resource
-# def load_super_resolution_model(model_path, scale):
-#     sr = cv2.dnn_superres.DnnSuperResImpl_create()
-#     sr.readModel(model_path)
-#     sr.setModel("fsrcnn", scale)
-#     return sr
+@st.cache_resource
+def load_super_resolution_model(model_path, scale):
+    sr = cv2.dnn_superres.DnnSuperResImpl_create()
+    sr.readModel(model_path)
+    sr.setModel("fsrcnn", scale)
+    return sr
 
 # C:\Users\VTOS\Desktop\STARWAR\models\polygon_classification\mobilenet\best_mobinet_polygon_classification.tflite
 # Paths to the models
@@ -57,6 +57,7 @@ current_dir = os.path.dirname(__file__)
 polygon_model_path = os.path.join(current_dir[:-6], "models/polygon_classification/mobilenet/", "best_mobinet_polygon_classification.h5")
 sr_model_path = os.path.join(current_dir[:-6], "models/upscale/", "FSRCNN-small_x4.pb")
 interpreter_path = os.path.join(current_dir[:-6], "models/polygon_classification/mobilenet/", "best_mobinet_polygon_classification.tflite")
+sample_map_path = os.path.join(current_dir[:-6], "images/", "shapefile_medium.png")
 sample_input_1_path = os.path.join(current_dir[:-6], "images/", "sample_input_1.jpg")
 sample_input_2_path = os.path.join(current_dir[:-6], "images/", "sample_input_2.jpg")
 sample_input_3_path = os.path.join(current_dir[:-6], "images/", "sample_input_3.jpg")
@@ -64,7 +65,7 @@ sample_input_4_path = os.path.join(current_dir[:-6], "images/", "sample_input_4.
 sample_input_5_path = os.path.join(current_dir[:-6], "images/", "sample_input_5.jpg")
 # Load the models
 model = load_cached_model(polygon_model_path)
-# sr = load_super_resolution_model(sr_model_path, 4)
+sr = load_super_resolution_model(sr_model_path, 4)
 interpreter = load_tflite_model(interpreter_path)
 
 
@@ -145,7 +146,7 @@ def display_windows(windows):
 
 @st.cache_data
 def preprocess_sample_windows():
-    image_path = "images\shapefile_medium.png"
+    image_path = sample_map_path
     image = cv2.imread(image_path)
     image_plot = np.array(image)
     if image.shape[2] == 4:
@@ -264,8 +265,8 @@ def main():
         # Nút bấm để thực hiện cắt ảnh
         if st.sidebar.button("Create Search Windows"):
             if upscale:
-                # st.session_state.windows = detect_windows_and_upscale(image, window_size, stride, sr)
-                st.session_state.windows = detect_windows(image, window_size, stride)
+                st.session_state.windows = detect_windows_and_upscale(image, window_size, stride, sr)
+                # st.session_state.windows = detect_windows(image, window_size, stride)
             else:
                 st.session_state.windows = detect_windows(image, window_size, stride)
         if st.session_state.windows:
