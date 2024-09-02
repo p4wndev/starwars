@@ -221,10 +221,10 @@ def polygon_vs_polygon():
                                         polygon1 = extract_polygons(img1)
                                         polygon2 = extract_polygons(img2)
                                         # vertices, centroid, min_angle_vertex, vertex_angles, sorted_angles, polygon_angles
-                                        centroid1, min_angle_vertex1, sorted_vertices1, vertex_angles1, sorted_angles1, polygon_angles1 = calculate_angles(polygon1[1][0])          
-                                        fig1, polygon_angles1, vertex_angles1 = plot_polygon_and_image(polygon1[1][0], centroid1, min_angle_vertex1, vertex_angles1, sorted_angles1, polygon_angles1)
-                                        centroid2, min_angle_vertex2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2[1][0])          
-                                        fig2, polygon_angles2, vertex_angles2 = plot_polygon_and_image(polygon2[1][0], centroid2, min_angle_vertex2, vertex_angles2, sorted_angles2, polygon_angles2)
+                                        centroid1, min_angle_vertex1, sorted_vertices1, vertex_angles1, sorted_angles1, polygon_angles1 = calculate_angles(polygon1[0][0])          
+                                        fig1, polygon_angles1, vertex_angles1 = plot_polygon_and_image(polygon1[0][0], centroid1, min_angle_vertex1, vertex_angles1, sorted_angles1, polygon_angles1)
+                                        centroid2, min_angle_vertex2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2[0][0])          
+                                        fig2, polygon_angles2, vertex_angles2 = plot_polygon_and_image(polygon2[0][0], centroid2, min_angle_vertex2, vertex_angles2, sorted_angles2, polygon_angles2)
                                         st.code("combined_angles = np.concatenate([vertex_angles, sorted(polygon_angles)])")
                                         value_7 = np.concatenate([vertex_angles1, sorted(polygon_angles1)])
                                         value_8 = np.concatenate([vertex_angles2, sorted(polygon_angles2)])
@@ -354,10 +354,10 @@ def polygon_vs_polygon():
                                         polygon1 = extract_polygons(img1)
                                         polygon2 = extract_polygons(img2)
                                         # vertices, centroid, min_angle_vertex, vertex_angles, sorted_angles, polygon_angles
-                                        centroid1, min_angle_vertex1, sorted_vertices1, vertex_angles1, sorted_angles1, polygon_angles1 = calculate_angles(polygon1[1][0])          
-                                        fig1, polygon_angles1, vertex_angles1 = plot_polygon_and_image(polygon1[1][0], centroid1, min_angle_vertex1, vertex_angles1, sorted_angles1, polygon_angles1)
-                                        centroid2, min_angle_vertex2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2[1][0])          
-                                        fig2, polygon_angles2, vertex_angles2 = plot_polygon_and_image(polygon2[1][0], centroid2, min_angle_vertex2, vertex_angles2, sorted_angles2, polygon_angles2)
+                                        centroid1, min_angle_vertex1, sorted_vertices1, vertex_angles1, sorted_angles1, polygon_angles1 = calculate_angles(polygon1[0][0])          
+                                        fig1, polygon_angles1, vertex_angles1 = plot_polygon_and_image(polygon1[0][0], centroid1, min_angle_vertex1, vertex_angles1, sorted_angles1, polygon_angles1)
+                                        centroid2, min_angle_vertex2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2[0][0])          
+                                        fig2, polygon_angles2, vertex_angles2 = plot_polygon_and_image(polygon2[0][0], centroid2, min_angle_vertex2, vertex_angles2, sorted_angles2, polygon_angles2)
                                         
                                         with col1:
                                             ui.badges([(f"Polygon 1",'outline')])

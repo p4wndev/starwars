@@ -14,7 +14,8 @@ def validate_input(polygons1, polygons2, mode):
         if (len(polygons1)-1) > 1 or (len(polygons2)-1) > 1:
             return False, "Error: Both images must contain exactly one polygon for polygon vs polygon comparison."
     elif mode == "polygon_vs_map":
-        if (len(polygons2)-1) != 1:
+        if (len(polygons2)-1) > 1:
+            print(len(polygons2))
             return False, "Error: The polygon image must contain exactly one polygon for polygon vs map comparison."
         if(len(polygons1)-1) < 2:
             return False, "Error: The map image must contain atleast two polygons for polygon vs map comparison."
@@ -255,18 +256,23 @@ def process_image_and_find_similar_polygons_2(image1, image2, top_n=1, progress_
         centroid2, min_angle_vertex2, sorted_vertices2, sorted_angle_values2, sorted_angles2, polygon_angles2 = calculate_angles(vertices)
         combined_angles2 = np.concatenate([sorted(sorted_angle_values2), sorted(polygon_angles2)])
         combined_angles2_list.append(combined_angles2)
-
+        
     similarity_scores = []
     img1 = image1.copy()
     for i, (vertices, cropped_image) in enumerate(polygons1):
         centroid1, min_angle_vertex1, sorted_vertices1, sorted_angle_values1, sorted_angles1, polygon_angles1 = calculate_angles(vertices)
         combined_angles1 = np.concatenate([sorted(sorted_angle_values1), sorted(polygon_angles1)])
         
+        
         if option == "Subarrays":
-            for combined_angles2 in combined_angles2_list[1:]:  # Skip the first element
-                similarity = calculate_percentage_match(combined_angles1, combined_angles2, k1, k2)
-                similarity_scores.append((similarity, vertices, cropped_image, centroid1, min_angle_vertex1, sorted_angle_values1, sorted_angles1))
-                
+            if len(combined_angles2_list) == 2:
+                for combined_angles2 in combined_angles2_list[1:]:  # Skip the first element
+                    similarity = calculate_percentage_match(combined_angles1, combined_angles2, k1, k2)
+                    similarity_scores.append((similarity, vertices, cropped_image, centroid1, min_angle_vertex1, sorted_angle_values1, sorted_angles1))
+            else:
+                for combined_angles2 in combined_angles2_list:
+                    similarity = calculate_percentage_match(combined_angles1, combined_angles2, k1, k2)
+                    similarity_scores.append((similarity, vertices, cropped_image, centroid1, min_angle_vertex1, sorted_angle_values1, sorted_angles1))    
     similarity_scores = sorted(similarity_scores, key=lambda x: x[0], reverse=True)[:top_n]
     highest_similarity = similarity_scores[0][0] if similarity_scores else 0
     
@@ -392,7 +398,7 @@ def compare_maps(input_image, image2, similarity_threshold=80.0, progress_callba
             if j in used_polygons_image:
                 continue
             centroid_image, _, _, sorted_angle_values_image, _, _ = calculate_angles(vertices_image)
-            similarity, w1, w2 = normalize_and_compute_dtw_similarity(sorted_angle_values_input, sorted_angle_values_image)
+            similarity= calculate_percentage_match(sorted_angle_values_input, sorted_angle_values_image, 15, 5)
             if similarity >= similarity_threshold:
                 matched_polygons += 1
                 used_polygons_input.add(i)

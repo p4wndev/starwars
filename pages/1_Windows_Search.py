@@ -29,6 +29,10 @@ def read_image_2(uploaded_file):
         return image
     return None
 
+@st.cache_data
+def load_sample_image(image_path):
+    return cv2.imread(image_path)
+
 @st.cache_resource
 def load_tflite_model(model_path):
     # Load mô hình TFLite
@@ -57,12 +61,12 @@ current_dir = os.path.dirname(__file__)
 polygon_model_path = os.path.join(current_dir[:-6], "models/polygon_classification/mobilenet/", "best_mobinet_polygon_classification.h5")
 sr_model_path = os.path.join(current_dir[:-6], "models/upscale/", "FSRCNN-small_x2.pb")
 interpreter_path = os.path.join(current_dir[:-6], "models/polygon_classification/mobilenet/", "best_mobinet_polygon_classification.tflite")
-sample_map_path = os.path.join(current_dir[:-6], "images/", "shapefile_low.png")
-sample_input_1_path = os.path.join(current_dir[:-6], "images/", "sample_input_1.jpg")
-sample_input_2_path = os.path.join(current_dir[:-6], "images/", "sample_input_2.jpg")
-sample_input_3_path = os.path.join(current_dir[:-6], "images/", "sample_input_3.jpg")
-sample_input_4_path = os.path.join(current_dir[:-6], "images/", "sample_input_4.jpg")
-sample_input_5_path = os.path.join(current_dir[:-6], "images/", "sample_input_5.jpg")
+sample_map_path = os.path.join(current_dir[:-6], "images/", "map_blue_low.png")
+sample_input_1_path = os.path.join(current_dir[:-6], "images/", "sample_input_1.png")
+sample_input_2_path = os.path.join(current_dir[:-6], "images/", "sample_input_2.png")
+sample_input_3_path = os.path.join(current_dir[:-6], "images/", "sample_input_3.png")
+sample_input_4_path = os.path.join(current_dir[:-6], "images/", "sample_input_4.png")
+sample_input_5_path = os.path.join(current_dir[:-6], "images/", "sample_input_5.png")
 # Load the models
 model = load_cached_model(polygon_model_path)
 sr = load_super_resolution_model(sr_model_path, 2)
@@ -246,84 +250,107 @@ def main():
             search_sample = st.button("Search", key='search_sample', use_container_width=True)
     if display_sample:
         display_windows(SAMPLE_WINDOWS)
+    # if sample_input:
+    #     st.session_state.sample_windows = SAMPLE_WINDOWS
+    #     sample_image = cv2.imread(sample_input)
+    #     if sample_image.shape[2] == 4:
+    #         sample_image = cv2.cvtColor(sample_image, cv2.COLOR_BGRA2BGR)
+    #     image_plot = IMAGE_PLOT
+    #     image2 = sample_image
+    #     window_size = (500,500)
+    #     stride = 300
     if sample_input:
-        st.session_state.windows = SAMPLE_WINDOWS
-        sample_image = cv2.imread(sample_input)
+        st.session_state.sample_windows = SAMPLE_WINDOWS
+        sample_image = load_sample_image(sample_input)
         if sample_image.shape[2] == 4:
             sample_image = cv2.cvtColor(sample_image, cv2.COLOR_BGRA2BGR)
         image_plot = IMAGE_PLOT
         image2 = sample_image
         window_size = (500,500)
         stride = 300
-        
     st.sidebar.link_button("Download sample map", "https://drive.google.com/file/d/1x610cvzhqdc9s5MoJKkWmY-ljHKQ5Ud3/view?usp=sharing")
     uploaded_file = st.sidebar.file_uploader("Upload an map image", type=["jpg", "jpeg", "png"], key="map_uploader")
     if uploaded_file is not None:
         # Đọc tấm hình từ file tải lên
+        st.session_state.windows = []
         image_plot = Image.open(uploaded_file)
         image_plot = np.array(image_plot)
         image = read_image_2(uploaded_file)
         if image.shape[2] == 4:
             image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
         # Thiết lập các thông số cho cửa sổ
-        window_size = st.sidebar.number_input("Windows Size (px)", min_value=10, max_value=5000, value=500, step=10)
-        window_size = (window_size, window_size)
-        stride = st.sidebar.number_input("Stride (px)", min_value=10, max_value=3000, value=300, step=10)
-        upscale = st.sidebar.checkbox("Upscale")
+        windows_form = st.sidebar.form("windows_form")
+        with windows_form:
+            window_size = windows_form.number_input("Windows Size (px)", min_value=10, max_value=5000, value=500, step=10)
+            window_size = (window_size, window_size)
+            stride = windows_form.number_input("Stride (px)", min_value=10, max_value=3000, value=300, step=10)
+            upscale = windows_form.checkbox("Upscale")
+            create_windows_button = windows_form.form_submit_button("Create Search Windows")
         # Nút bấm để thực hiện cắt ảnh
-        if st.sidebar.button("Create Search Windows"):
+        if create_windows_button:
             if upscale:
                 st.session_state.windows = detect_windows_and_upscale(image, window_size, stride, sr)
                 # st.session_state.windows = detect_windows(image, window_size, stride)
             else:
                 st.session_state.windows = detect_windows(image, window_size, stride)
-        if st.session_state.windows:
-            display_windows(st.session_state.windows)
+    if st.session_state.windows:
+        display_windows(st.session_state.windows)
     search_error = st.empty()
     with st.expander("Upload Images", expanded=True):
-        col = st.columns(3)
-        with col[0]:
-            top_n = st.number_input("Select Top n", min_value=1, max_value=10, value=5, step=1, key="top_n_input")
-            min_similarity = st.number_input("Select Min Similarity", min_value=50, max_value=100, value=80, step=5, key="min_similarity_input")
-        with col[1]:
-            k1 = st.number_input("Select K1", min_value=0, max_value=50, value=15, step=5, key="k1_input")
-            min_similar_ratio = st.number_input("Select Min Similar Polygon Ratio", min_value=0.1, max_value=1.0, value=0.5, step=0.1, key="min_similar_ratio_input")
-        with col[2]:
-            k2 = st.number_input("Select K2", min_value=4, max_value=10, value=5, step=1, key="k2_input")
-            window_step = st.number_input("Select Window Step", min_value=1, max_value=5, value=2, step=1, key="window_step_input")
-        with st.popover("Documents"):
-            st.markdown("""
-                        - **Top_n**: The number of top scoring windows to be returned. Adjacent windows with similar scores will be merged if they are contiguous. Windows with a score of 0 will not be illustrated.
+        with st.form("parameters_form"):
+            col = st.columns(3)
+            with col[0]:
+                top_n = st.number_input("Select Top n", min_value=1, max_value=10, value=5, step=1, key="top_n_input")
+                min_similarity = st.number_input("Select Min Similarity", min_value=50, max_value=100, value=80, step=5, key="min_similarity_input")
+            with col[1]:
+                k1 = st.number_input("Select K1", min_value=0, max_value=50, value=15, step=5, key="k1_input")
+                min_similar_ratio = st.number_input("Select Min Similar Polygon Ratio", min_value=0.1, max_value=1.0, value=0.5, step=0.1, key="min_similar_ratio_input")
+            with col[2]:
+                k2 = st.number_input("Select K2", min_value=4, max_value=10, value=5, step=1, key="k2_input")
+                window_step = st.number_input("Select Window Step", min_value=1, max_value=5, value=2, step=1, key="window_step_input")
+            with st.popover("Documents"):
+                st.markdown("""
+                            - **Top_n**: The number of top scoring windows to be returned. Adjacent windows with similar scores will be merged if they are contiguous. Windows with a score of 0 will not be illustrated.
 
-                        - **K1**: The tolerance angle (degrees).
+                            - **K1**: The tolerance angle (degrees).
 
-                        - **K2**: The minimum subsequence length.
+                            - **K2**: The minimum subsequence length.
 
-                        - **Min Similarity**: The minimum percentage similarity required to determine that a pair of polygons matches.
+                            - **Min Similarity**: The minimum percentage similarity required to determine that a pair of polygons matches.
 
-                        - **Min Similar Polygon Ratio**: The minimum polygon similarity ratio for early stopping.
+                            - **Min Similar Polygon Ratio**: The minimum polygon similarity ratio for early stopping.
 
-                        - **Window Step**: The step size for window searching (Smaller steps lead to higher accuracy but take more time to search).
-                        """)
-        uploaded_image = st.file_uploader("Upload an image to search", type=["jpg", "jpeg", "png"], key="image_uploader")
-        if uploaded_image is not None:
-            # image2 = Image.open(uploaded_image)
-            # image2 = np.array(image2)
-            
-            image2 = read_image_2(uploaded_image)
-            if image2.shape[2] == 4:
-                image2 = cv2.cvtColor(image2, cv2.COLOR_BGRA2BGR)
-            # image2 = sr.upsample(image2)
-        search_button = st.button("Search")
+                            - **Window Step**: The step size for window searching (Smaller steps lead to higher accuracy but take more time to search).
+                            """)
+            uploaded_image = st.file_uploader("Upload an image to search", type=["jpg", "jpeg", "png"], key="image_uploader")
+            if uploaded_image is not None:
+                # image2 = Image.open(uploaded_image)
+                # image2 = np.array(image2)
+                
+                image2 = read_image_2(uploaded_image)
+                if image2.shape[2] == 4:
+                    image2 = cv2.cvtColor(image2, cv2.COLOR_BGRA2BGR)
+                # image2 = sr.upsample(image2)
+            search_button = st.form_submit_button("Search")
+        # search_button = st.button("Search")
     if (search_button and image2 is not None) or (search_sample and image2 is not None):
         # So sánh ảnh tìm kiếm với các cửa sổ trong ảnh tải lên
-        results = compare_image(image2, st.session_state.windows, 
-                                window_step=window_step, 
-                                min_similarity=min_similarity, 
-                                min_similar_ratio=min_similar_ratio,
-                                k1=k1,
-                                k2=k2, 
-                                interpreter=interpreter)
+        if st.session_state.windows:
+            results = compare_image(image2, st.session_state.windows, 
+                                    window_step=window_step, 
+                                    min_similarity=min_similarity, 
+                                    min_similar_ratio=min_similar_ratio,
+                                    k1=k1,
+                                    k2=k2, 
+                                    interpreter=interpreter)
+        else:
+            results = compare_image(image2, st.session_state.sample_windows, 
+                                    window_step=window_step, 
+                                    min_similarity=min_similarity, 
+                                    min_similar_ratio=min_similar_ratio,
+                                    k1=k1,
+                                    k2=k2, 
+                                    interpreter=interpreter)
         filtered_results = [item for item in results if item['score'] > 0]
         top_results = heapq.nlargest(top_n, filtered_results, key=lambda x: x['score'])
         colors = [(0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255)]
