@@ -417,3 +417,90 @@ def compare_maps(input_image, image2, similarity_threshold=80.0, progress_callba
         progress_callback(100)  # Update progress to 100%
 
     return result_rgb, matched_polygons, total_polygons, input_polygon_count, None
+
+def plot_polygon_and_circle_2(image_cluster, results):
+    if not isinstance(image_cluster, np.ndarray):
+        image_cluster = np.array(image_cluster)
+    
+    # Tính toán kích thước phù hợp cho chữ và độ dày đường vẽ dựa trên kích thước ảnh
+    image_height, image_width = image_cluster.shape[:2]
+    font_scale = min(image_width, image_height) / 1000
+    thickness_scale = min(image_width, image_height) / 500  # Hệ số mới cho độ dày
+    
+    for res in results:
+        _, _, similarity, vertices, centroid = res
+        print(f"Plotting similarity: {similarity}")
+
+        vertices = np.array(vertices, dtype=np.int32)
+        centroid = tuple(map(int, centroid))
+
+        # Tính toán độ dày phù hợp
+        polygon_thickness = max(1, int(thickness_scale))
+        circle_thickness = max(2, int(thickness_scale * 2))
+        text_thickness = max(1, int(thickness_scale))
+
+        # Vẽ đa giác
+        cv2.polylines(image_cluster, [vertices], isClosed=True, color=(0, 0, 255), thickness=polygon_thickness)
+
+        # Vẽ vòng tròn quanh tâm
+        radius = int(max(np.linalg.norm(vertices - centroid, axis=1)))
+        radius = 2*radius
+        cv2.circle(image_cluster, centroid, radius, color=(0, 0, 255), thickness=circle_thickness)
+
+        # Thêm text độ tương đồng phía trên vòng tròn
+        text = f'{similarity:.2f}%'
+        text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_thickness)
+        text_x = centroid[0] - text_size[0] // 2
+        text_y = centroid[1] - radius - 10
+        cv2.putText(image_cluster, text, (text_x, text_y),
+                    cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 255), text_thickness, cv2.LINE_AA)
+
+    return image_cluster
+
+def compare_polygon(polygon1, polygon2, k1=15, k2=5):
+    # Tính toán các góc cho polygon1
+    centroid1, min_angle_vertex1, sorted_vertices1, sorted_angle_values1, sorted_angles1, polygon_angles1 = calculate_angles(polygon1)
+    combined_angles1 = np.concatenate([sorted(sorted_angle_values1), sorted(polygon_angles1)])
+
+    # Tính toán các góc cho polygon2
+    centroid2, min_angle_vertex2, sorted_vertices2, sorted_angle_values2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2)
+    combined_angles2 = np.concatenate([sorted(sorted_angle_values2), sorted(polygon_angles2)])
+
+    # Tính độ tương đồng
+    similarity = calculate_percentage_match(combined_angles1, combined_angles2, k1, k2)
+    return similarity, sorted_vertices2, centroid2
+
+def find_polygon(image2, polygons1, polygons2, top_n=5, stop_threshold=95, k1=15, k2=3):
+    # Debugging: print number of polygons found
+    print(f"Number of polygons in image1: {len(polygons1)}")
+    print(f"Number of polygons in image2: {len(polygons2)}")
+
+    result = []
+    i = 0
+    for polygon1 in polygons1:
+        if len(polygon1[0]) <= 4:
+            continue
+        for polygon2 in polygons2:
+            similarity, vertices, centroid = compare_polygon(polygon1[0], polygon2[0], k1=k1, k2=k2)
+            print(f"Similarity {i}: {similarity}")
+            i += 1
+            # Append to results if conditions are met
+            result.append((polygon1, polygon2, similarity, vertices, centroid))
+
+            # Sort and keep only the top_n best results
+            result = sorted(result, key=lambda x: x[2], reverse=True)[:top_n]
+
+            # Check if the stop threshold is reached
+            if result and result[0][2] >= stop_threshold:
+                print(f"Stopping early as similarity reached {result[0][2]} which is above threshold {stop_threshold}")
+                break
+        else:
+            continue
+        break
+
+    result_image = image2.copy()
+    
+    # Plot all top_n results on the image
+    result_image = plot_polygon_and_circle_2(result_image, result)
+
+    return result, result_image

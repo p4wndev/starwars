@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+from io import BytesIO
 
 
 def polygon_area(vertices):
@@ -66,25 +67,7 @@ def compute_centroid(vertices):
 
     return C_x, C_y
 
-# def extract_polygons(image, min_vertices=3, max_area=100000):
-#     image = np.array(image)
-#     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-#     ret, thresh = cv2.threshold(gray, 200, 255, 0)
-#     contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-#     polygons = []
-#     for cnt in contours:
-#         approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
-#         if len(approx) >= min_vertices:
-#             flattened_vertices = [tuple(coord[0]) for coord in approx]
-#             area = polygon_area(flattened_vertices)
-#             if area < max_area:
-#                 cropped_image = crop_polygon_from_image(image, flattened_vertices)
-#                 cropped_image = remove_white_pixels(cropped_image, 100)
-#                 polygons.append((flattened_vertices, cropped_image))
-#     return polygons
-
-def extract_polygons(image, min_vertices=3, max_area=100000):
+def extract_polygons(image, min_vertices=3, max_area=200000):
     image = np.array(image)
 
     # Check the number of channels in the image
@@ -111,11 +94,87 @@ def extract_polygons(image, min_vertices=3, max_area=100000):
         if len(approx) >= min_vertices:
             flattened_vertices = [tuple(coord[0]) for coord in approx]
             area = polygon_area(flattened_vertices)
+            print("area: ", area)
             if area < max_area:
                 cropped_image = crop_polygon_from_image(image, flattened_vertices)
                 cropped_image = remove_white_pixels(cropped_image, 100)
                 polygons.append((flattened_vertices, cropped_image))
     return polygons
+
+def extract_polygons_adjustable(image, min_vertices=3,min_area=80, max_area=10000):
+    image = np.array(image)
+
+    # Check the number of channels in the image
+    if len(image.shape) == 2:  # Grayscale image (single channel)
+        gray = image
+    elif image.shape[2] == 3:  # BGR image (3 channels)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    elif image.shape[2] == 4:  # RGBA image (4 channels)
+        image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    else:
+        raise ValueError("Unexpected number of channels in input image")
+
+    # Ensure the image is of type uint8
+    if gray.dtype != np.uint8:
+        gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+    ret, thresh = cv2.threshold(gray, 200, 255, 0)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    polygons = []
+    for cnt in contours:
+        approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+        if len(approx) >= min_vertices:
+            flattened_vertices = [tuple(coord[0]) for coord in approx]
+            area = polygon_area(flattened_vertices)
+            print("area-adjustable: ", area)
+            if area > min_area and area < max_area:
+                cropped_image = crop_polygon_from_image(image, flattened_vertices)
+                cropped_image = remove_white_pixels(cropped_image, 100)
+                polygons.append((flattened_vertices, cropped_image))
+    return polygons
+
+def plot_polygons(polygons, title):
+    # Tìm kích thước tối đa của hình ảnh
+    all_vertices = [vertex for poly in polygons for vertex in poly[0]]
+    x_coords, y_coords = zip(*all_vertices)
+    x_min, x_max = min(x_coords), max(x_coords)
+    y_min, y_max = min(y_coords), max(y_coords)
+    
+    # Thêm padding
+    padding = 0.05  # 5% padding
+    width = x_max - x_min
+    height = y_max - y_min
+    x_padding = width * padding
+    y_padding = height * padding
+    
+    # Tạo hình với tỷ lệ khung hình chính xác và padding
+    fig, ax = plt.subplots(figsize=((width + 2*x_padding)/100, (height + 2*y_padding)/100), dpi=500)
+    
+    # Vẽ các đa giác
+    for poly in polygons:
+        vertices = poly[0]
+        if vertices:
+            x, y = zip(*vertices)
+            ax.fill(x, y, fc='black', ec='black')
+    
+    # Thiết lập giới hạn trục để khớp với kích thước hình ảnh và padding
+    ax.set_xlim(x_min - x_padding, x_max + x_padding)
+    ax.set_ylim(y_min - y_padding, y_max + y_padding)
+    
+    ax.set_title(title)
+    ax.axis('off')
+    
+    # Đảm bảo tỷ lệ khung hình là chính xác
+    ax.set_aspect('equal', adjustable='box')
+    
+    # Lưu hình vào buffer
+    buf = BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0.05)
+    plt.close(fig)
+    buf.seek(0)
+    return buf
 
 def calculate_angles(vertices):
     def polygon_interior_angles(vertices):
