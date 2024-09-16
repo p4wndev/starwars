@@ -67,7 +67,7 @@ def compute_centroid(vertices):
 
     return C_x, C_y
 
-def extract_polygons(image, min_vertices=3, max_area=200000):
+def extract_polygons(image, min_vertices=3, max_area=300000):
     image = np.array(image)
 
     # Check the number of channels in the image
@@ -94,7 +94,7 @@ def extract_polygons(image, min_vertices=3, max_area=200000):
         if len(approx) >= min_vertices:
             flattened_vertices = [tuple(coord[0]) for coord in approx]
             area = polygon_area(flattened_vertices)
-            print("area: ", area)
+            # print("area: ", area)
             if area < max_area:
                 cropped_image = crop_polygon_from_image(image, flattened_vertices)
                 cropped_image = remove_white_pixels(cropped_image, 100)
@@ -121,14 +121,14 @@ def extract_polygons_adjustable(image, min_vertices=3,min_area=80, max_area=1000
 
     ret, thresh = cv2.threshold(gray, 200, 255, 0)
     contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
+
     polygons = []
     for cnt in contours:
         approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
         if len(approx) >= min_vertices:
             flattened_vertices = [tuple(coord[0]) for coord in approx]
             area = polygon_area(flattened_vertices)
-            print("area-adjustable: ", area)
+            # print("area-adjustable: ", area)
             if area > min_area and area < max_area:
                 cropped_image = crop_polygon_from_image(image, flattened_vertices)
                 cropped_image = remove_white_pixels(cropped_image, 100)
@@ -141,34 +141,34 @@ def plot_polygons(polygons, title):
     x_coords, y_coords = zip(*all_vertices)
     x_min, x_max = min(x_coords), max(x_coords)
     y_min, y_max = min(y_coords), max(y_coords)
-    
+
     # Thêm padding
     padding = 0.05  # 5% padding
     width = x_max - x_min
     height = y_max - y_min
     x_padding = width * padding
     y_padding = height * padding
-    
+
     # Tạo hình với tỷ lệ khung hình chính xác và padding
     fig, ax = plt.subplots(figsize=((width + 2*x_padding)/100, (height + 2*y_padding)/100), dpi=500)
-    
+
     # Vẽ các đa giác
     for poly in polygons:
         vertices = poly[0]
         if vertices:
             x, y = zip(*vertices)
             ax.fill(x, y, fc='black', ec='black')
-    
+
     # Thiết lập giới hạn trục để khớp với kích thước hình ảnh và padding
     ax.set_xlim(x_min - x_padding, x_max + x_padding)
     ax.set_ylim(y_min - y_padding, y_max + y_padding)
-    
+
     ax.set_title(title)
     ax.axis('off')
-    
+
     # Đảm bảo tỷ lệ khung hình là chính xác
     ax.set_aspect('equal', adjustable='box')
-    
+
     # Lưu hình vào buffer
     buf = BytesIO()
     plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0.05)
@@ -176,13 +176,65 @@ def plot_polygons(polygons, title):
     buf.seek(0)
     return buf
 
+# def calculate_angles(vertices):
+#     def polygon_interior_angles(vertices):
+#         def angle_between(v1, v2):
+#             dot = np.dot(v1, v2)
+#             det = np.cross(v1, v2)
+#             angle = np.arctan2(det, dot)
+#             return np.degrees(angle) % 360
+
+#         num_vertices = len(vertices)
+#         angles = []
+
+#         for i in range(num_vertices):
+#             p0 = np.array(vertices[i - 1])
+#             p1 = np.array(vertices[i])
+#             p2 = np.array(vertices[(i + 1) % num_vertices])
+
+#             v1 = p0 - p1
+#             v2 = p2 - p1
+
+#             angle = angle_between(v1, v2)
+#             if angle > 180:
+#                 angle = 360 - angle
+
+#             angles.append(angle)
+#         return angles
+
+#     polygon_angles = polygon_interior_angles(vertices)
+#     # print("polygon_angles: ",polygon_angles)
+#     # print("len(vertices): ", len(vertices))
+#     # print("Angels difference: ", abs(sum(polygon_angles) - ((len(vertices) - 2) * 180)))
+
+#     min_angle_index = np.argmin(polygon_angles)
+#     min_angle_vertex = vertices[min_angle_index]
+
+#     centroid = np.mean(vertices, axis=0)
+#     unique_vertices = list(dict.fromkeys(vertices))
+
+#     angles = []
+#     for vertex in unique_vertices:
+#         dx = vertex[0] - centroid[0]
+#         dy = vertex[1] - centroid[1]
+#         angle = math.atan2(dy, dx) - math.atan2(min_angle_vertex[1] - centroid[1], min_angle_vertex[0] - centroid[0])
+#         if angle < 0:
+#             angle += 2 * math.pi
+#         angles.append((angle, vertex))
+
+#     sorted_angles = sorted(angles, key=lambda x: x[0])
+#     sorted_vertices = [vertex for angle, vertex in sorted_angles]
+#     vertex_angles = [math.degrees(angle) for angle, vertex in sorted_angles]
+
+#     return centroid, min_angle_vertex, sorted_vertices, vertex_angles, sorted_angles, polygon_angles
+
 def calculate_angles(vertices):
     def polygon_interior_angles(vertices):
         def angle_between(v1, v2):
             dot = np.dot(v1, v2)
             det = np.cross(v1, v2)
             angle = np.arctan2(det, dot)
-            return np.degrees(angle) % 360
+            return -np.degrees(angle)
 
         num_vertices = len(vertices)
         angles = []
@@ -196,41 +248,38 @@ def calculate_angles(vertices):
             v2 = p2 - p1
 
             angle = angle_between(v1, v2)
-            if angle > 180:
-                angle = 360 - angle
+            if angle < 0:
+                angle += 360
+
+            # if angle > 180:
+            #     angle = 360 - angle
 
             angles.append(angle)
-
-        # Normalize angles to ensure their sum is exactly (n-2) * 180
-        # expected_sum = (num_vertices - 2) * 180
-        # current_sum = sum(angles)
-        # scale_factor = expected_sum / current_sum
-        # angles = [angle * scale_factor for angle in angles] #Nhân góc với tỉ lệ của kỳ vọng/thực tế
-
         return angles
 
     polygon_angles = polygon_interior_angles(vertices)
-    # print("polygon_angles: ",polygon_angles)
-    # print("len(vertices): ", len(vertices))
-    # print("Angels difference: ", abs(sum(polygon_angles) - ((len(vertices) - 2) * 180)))
-
-    min_angle_index = np.argmin(polygon_angles)
-    min_angle_vertex = vertices[min_angle_index]
 
     centroid = np.mean(vertices, axis=0)
     unique_vertices = list(dict.fromkeys(vertices))
 
     angles = []
-    for vertex in unique_vertices:
+    for i, vertex in enumerate(unique_vertices):
         dx = vertex[0] - centroid[0]
         dy = vertex[1] - centroid[1]
-        angle = math.atan2(dy, dx) - math.atan2(min_angle_vertex[1] - centroid[1], min_angle_vertex[0] - centroid[0])
+        angle = math.atan2(dy, dx)
         if angle < 0:
             angle += 2 * math.pi
         angles.append((angle, vertex))
 
     sorted_angles = sorted(angles, key=lambda x: x[0])
     sorted_vertices = [vertex for angle, vertex in sorted_angles]
-    vertex_angles = [math.degrees(angle) for angle, vertex in sorted_angles]
 
-    return centroid, min_angle_vertex, sorted_vertices, vertex_angles, sorted_angles, polygon_angles
+    # Tính góc tương đối giữa các đỉnh liên tiếp
+    vertex_angles = []
+    for i in range(len(sorted_angles)):
+        current_angle = sorted_angles[i][0]
+        prev_angle = sorted_angles[i-1][0]
+        relative_angle = (current_angle - prev_angle) % (2 * math.pi)
+        vertex_angles.append(math.degrees(relative_angle))
+
+    return centroid, sorted_vertices, vertex_angles, sorted_angles, polygon_angles

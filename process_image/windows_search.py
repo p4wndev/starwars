@@ -9,16 +9,15 @@ class_names = ['normal_polygon', 'special_polygon', 'superhero_polygon']
 
 def process_image_and_find_similar_polygons_2(polygon1, polygon2, k1=15, k2=3):
     # Tính toán các góc cho polygon1
-    centroid1, min_angle_vertex1, sorted_vertices1, sorted_angle_values1, sorted_angles1, polygon_angles1 = calculate_angles(polygon1)
-    combined_angles1 = np.concatenate([sorted(sorted_angle_values1), sorted(polygon_angles1)])
-
+    centroid1, sorted_vertices1, vertex_angles1, sorted_angles1, polygon_angles1 = calculate_angles(polygon1)
     # Tính toán các góc cho polygon2
-    centroid2, min_angle_vertex2, sorted_vertices2, sorted_angle_values2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2)
-    combined_angles2 = np.concatenate([sorted(sorted_angle_values2), sorted(polygon_angles2)])
+    centroid2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2)
 
     # Tính độ tương đồng
-    similarity = calculate_percentage_match(combined_angles1, combined_angles2, k1, k2)
+    similarity1 = calculate_percentage_match(vertex_angles1, vertex_angles2, k1, k2)
+    similarity2 = calculate_percentage_match(polygon_angles1, polygon_angles2, k1, k2)
 
+    similarity = (similarity1 + similarity2) / 2
     return similarity
 def classify_image_tflite(image, interpreter):
     input_details = interpreter.get_input_details()
@@ -87,7 +86,7 @@ def compare_image(input_image, image_set, window_step, min_similarity, min_simil
                         })
 
                         # if similarity_scores == 100 or matched_polygons >= 0.5 * input_polygon_count:
-                        if matched_polygons >= min_similar_ratio * input_polygon_count: 
+                        if matched_polygons >= min_similar_ratio * input_polygon_count:
                             early_stop = True
                             break
 

@@ -52,7 +52,7 @@ def listing_polygon_input(image):
 
 @st.cache_resource
 def load_cached_polygons():
-    cache_file_path = os.path.join(current_dir[:-6], "cache", "polygons.pkl")
+    cache_file_path = os.path.join(current_dir[:-6], "cache", "polygons2.pkl")
     with open(cache_file_path, 'rb') as f:
         return pickle.load(f)
 
@@ -70,14 +70,14 @@ def display_map(image_path):
         return
     with st.expander("Map:", expanded=True):
         st.image(image_path)
-        
+
 def update_and_display_polygons(buffer_distance, min_area, max_area, image2, upload_info):
     polygons = extract_polygons_adjustable(image2, min_vertices=3, min_area=min_area, max_area=max_area)
-    
+
     buffered_polygons = [Polygon(poly[0]).buffer(buffer_distance) for poly in polygons]
     merged_polygon = unary_union(buffered_polygons)
     final_polygon = merged_polygon.buffer(-buffer_distance)
-    
+
     if isinstance(final_polygon, MultiPolygon):
         list_polygons_input = [(list(poly.exterior.coords), None) for poly in final_polygon.geoms]
     else:
@@ -90,20 +90,20 @@ def update_and_display_polygons(buffer_distance, min_area, max_area, image2, upl
     merged_image_buffer = plot_polygons(list_polygons_input, '')
     merged_image_pil = Image.open(merged_image_buffer)
     merged_image_array = np.array(merged_image_pil)
-    
+
     fig_m, ax_m = plt.subplots(figsize=(10, 10))
     ax_m.imshow(merged_image_array)
     num_polygons = len(list_polygons_input)
     ax_m.axis('off')
-    
+
     # Chuyển fig thành image
     buf = io.BytesIO()
     fig_m.savefig(buf, format='png', bbox_inches='tight')
     buf.seek(0)
     img = Image.open(buf)
-    
+
     plt.close(fig_m)
-    
+
     return img, num_polygons
 
 @st.cache_data
@@ -120,7 +120,6 @@ sample_input_4_path = os.path.join(current_dir[:-6], "images/", "sample_polygon_
 sample_input_5_path = os.path.join(current_dir[:-6], "images/", "sample_polygon_5.png")
 
 def main():
-    
     st.markdown("""
     <style>
         .st-emotion-cache-13ln4jf{
@@ -160,8 +159,6 @@ def main():
         }
     </style>
     """, unsafe_allow_html=True)
-
-
     current_dir = os.path.dirname(__file__)
     image_path_logo2 = os.path.join(current_dir[:-6], "images", "LOGO2.png")
     image_path_logo1 = os.path.join(current_dir[:-6], "images", "logo1.jpg")
@@ -176,7 +173,7 @@ def main():
         st.write("")
         st.write("")
         st.write("")
-        
+
         st.image(image_path_eu)
     st.logo(image_path_logo1)
     upload_info = st.empty()
@@ -222,14 +219,14 @@ def main():
             image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
         list_polygon_form = st.sidebar.form("map_form")
         with list_polygon_form:
-            buffer_distance_ = st.number_input("Select Buffer Distance", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key="buffer_distance_input_")
-            min_area_, max_area_ = st.select_slider("Select Area Range", options=[50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 5000, 10000, 25000, 50000, 100000], value=(50, 10000))
+            buffer_distance_ = st.number_input("Select Buffer Distance", min_value=0.0, max_value=5.0, value=1.0, step=0.1, key="buffer_distance_input_")
+            min_area_, max_area_ = st.select_slider("Select Area Range", options=[0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 5000, 10000, 25000, 50000, 100000], value=(0, 10000))
             create_list_polygon_button = list_polygon_form.form_submit_button("Create List Polygon")
         if create_list_polygon_button:
             # st.session_state.input_map = image
             map_image, num_polygons_map_input = update_and_display_polygons(buffer_distance_, min_area_, max_area_, image, upload_info)
             st.session_state.input_map = map_image
-            st.session_state.list_polygons_map = listing_polygon_map(st.session_state.input_map, 5, min_area=min_area_, max_area=max_area_)
+            st.session_state.list_polygons_map = listing_polygon_map(st.session_state.input_map, 5, min_area=min_area_, max_area=1000000)
             ui.badges([(f"Number of polygons in map: {num_polygons_map_input}",'secondary')], key=f"badge_map")
             map_plot = st.empty()
             map_plot.image(map_image)
@@ -240,15 +237,15 @@ def main():
             image2 = read_image_2(uploaded_image)
             if image2.shape[2] == 4:
                 image2 = cv2.cvtColor(image2, cv2.COLOR_BGRA2BGR)
-        buffer_distance = st.number_input("Select Buffer Distance", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key="buffer_distance_input")
-        min_area, max_area = st.select_slider("Select Area Range", options=[50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 10000, 25000, 50000, 100000], value=(50, 10000))
+        buffer_distance = st.number_input("Select Buffer Distance", min_value=0.0, max_value=5.0, value=1.0, step=0.1, key="buffer_distance_input")
+        min_area, max_area = st.select_slider("Select Area Range", options=[0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 10000, 25000, 50000, 100000], value=(0, 10000))
         if min_area and max_area:
             # Sử dụng st.empty() để tạo một vùng có thể cập nhật
             image_polygon, num_polygons_input = update_and_display_polygons(buffer_distance, min_area, max_area, image2, upload_info)
             # Cập nhật hình ảnh đa giác mỗi khi thay đổi giá trị min_area hoặc max_area
             # num_polygons_plot.markdown(f"Number of polygons in input: {num_polygons_input}")
             if image_polygon:
-                ui.badges([(f"Number of polygons in input: {num_polygons_input}",'secondary')], key=f"badge_input")
+                ui.badges([(f"Number of polygons input: {num_polygons_input}",'secondary')], key=f"badge_input")
                 polygon_plot = st.empty()
                 polygon_plot.image(image_polygon)
                 #Lấy vertices của polygon (ảnh black-white)
@@ -262,7 +259,7 @@ def main():
         with st.form("parameters_form"):
             col = st.columns(4)
             with col[0]:
-                top_n = st.number_input("Select Top n", min_value=1, max_value=10, value=5, step=1, key="top_n_input")   
+                top_n = st.number_input("Select Top n", min_value=1, max_value=10, value=5, step=1, key="top_n_input")
             with col[1]:
                 k1 = st.number_input("Select K1", min_value=0, max_value=50, value=15, step=5, key="k1_input")
             with col[2]:
@@ -285,73 +282,82 @@ def main():
             print(f"Number of polygons input: {len(list_polygons_input)}")
             print(f"Number of polygons in map: {len(st.session_state.list_polygons_map)}")
             result, result_img = find_polygon(st.session_state.input_map.copy(),
-                                              list_polygons_input, 
+                                              list_polygons_input,
                                               st.session_state.list_polygons_map,
                                               top_n=top_n,
                                               stop_threshold=stop_threshold,
                                               k1=k1,
                                               k2=k2)
-            
-            centroid_input, min_angle_vertex_input, sorted_vertices_input, vertex_angles_input, sorted_angles_input, polygon_angles_input = calculate_angles(list_polygons_input[0][0])          
-            fig_input, polygon_angles_input, vertex_angles_input = plot_polygon_and_image(list_polygons_input[0][0], centroid_input, min_angle_vertex_input, vertex_angles_input, sorted_angles_input, polygon_angles_input)
+            centroid_input, sorted_vertices_input, vertex_angles_input, sorted_angles_input, polygon_angles_input = calculate_angles(list_polygons_input[0][0])
+            fig_input, polygon_angles_input, vertex_angles_input = plot_polygon_and_image(list_polygons_input[0][0], centroid_input, vertex_angles_input, sorted_angles_input, polygon_angles_input)
             st.image(result_img)
-            
+
             with st.expander("Detailed Results"):
                 for i, (polygon1, polygon2, similarity, vertices, centroid) in enumerate(result[:top_n]):
                     ui.badges([(f"Similarity Result {i+1}: {similarity:.2f}%", 'primary')], key=f"similarity_badge_{i}")
                     # st.write(f"Similarity Result {i+1}: {similarity:.2f}%")
                     col1, col2 = st.columns(2)
-                    
+
                     with col1:
                         st.pyplot(fig_input)
                         st.write("Input Polygon")
-                        value_input = np.concatenate([vertex_angles_input, sorted(polygon_angles_input)]).tolist()
-                        st.write(value_input)
-                    
+                        ui.badges([(f"Vertex angles:", 'secondary')], key=f"vertex_angles_input{i}")
+                        st.write(vertex_angles_input)
+                        ui.badges([(f"Polygon angles:", 'secondary')], key=f"polygon_angles_input{i}")
+                        st.write(polygon_angles_input)
+
                     with col2:
-                        centroid2, min_angle_vertex2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2[0])          
-                        fig2, polygon_angles2, vertex_angles2 = plot_polygon_and_image(polygon2[0], centroid2, min_angle_vertex2, vertex_angles2, sorted_angles2, polygon_angles2)
+                        centroid2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2[0])
+                        fig2, polygon_angles2, vertex_angles2 = plot_polygon_and_image(polygon2[0], centroid2, vertex_angles2, sorted_angles2, polygon_angles2)
                         st.pyplot(fig2)
                         st.write(f"Similar Polygon {i+1}")
-                        value_similar = np.concatenate([vertex_angles2, sorted(polygon_angles2)]).tolist()
-                        st.write(value_similar)
-                    
+                        ui.badges([(f"Vertex angles:", 'secondary')], key=f"vertex_angles_similar{i}")
+                        st.write(vertex_angles2)
+                        ui.badges([(f"Polygon angles:", 'secondary')], key=f"polygon_angles_similar{i}")
+                        st.write(polygon_angles2)
+
                     st.write("---")
         else:
             print(f"Number of polygons input: {len(list_polygons_input)}")
             print(f"Number of polygons in map: {len(st.session_state.list_polygons_map)}")
             result, result_img = find_polygon(st.session_state.input_map.copy() if st.session_state.input_map else st.session_state.cache_map.copy(),
-                                              list_polygons_input, 
+                                              list_polygons_input,
                                               st.session_state.list_polygons_map if st.session_state.list_polygons_map else st.session_state.list_polygons_cache,
                                               top_n=top_n,
                                               stop_threshold=stop_threshold,
                                               k1=k1,
                                               k2=k2)
-            
-            centroid_input, min_angle_vertex_input, sorted_vertices_input, vertex_angles_input, sorted_angles_input, polygon_angles_input = calculate_angles(list_polygons_input[0][0])          
-            fig_input, polygon_angles_input, vertex_angles_input = plot_polygon_and_image(list_polygons_input[0][0], centroid_input, min_angle_vertex_input, vertex_angles_input, sorted_angles_input, polygon_angles_input)
-            st.image(result_img)
-            
+
+            centroid_input, sorted_vertices_input, vertex_angles_input, sorted_angles_input, polygon_angles_input = calculate_angles(list_polygons_input[0][0])
+            fig_input, polygon_angles_input, vertex_angles_input = plot_polygon_and_image(list_polygons_input[0][0], centroid_input, vertex_angles_input, sorted_angles_input, polygon_angles_input)
+            st.pyplot(result_img)
+
             with st.expander("Detailed Results"):
                 for i, (polygon1, polygon2, similarity, vertices, centroid) in enumerate(result[:top_n]):
                     ui.badges([(f"Similarity Result {i+1}: {similarity:.2f}%", 'primary')], key=f"similarity_badge_{i}")
                     # st.write(f"Similarity Result {i+1}: {similarity:.2f}%")
                     col1, col2 = st.columns(2)
-                    
+
                     with col1:
                         st.pyplot(fig_input)
                         st.write("Input Polygon")
-                        value_input = np.concatenate([vertex_angles_input, sorted(polygon_angles_input)]).tolist()
-                        st.write(value_input)
-                    
+                        ui.badges([(f"Vertex angles:", 'secondary')], key=f"vertex_angles_input{i}")
+                        st.write(vertex_angles_input)
+                        ui.badges([(f"Polygon angles:", 'secondary')], key=f"polygon_angles_input{i}")
+                        st.write(polygon_angles_input)
+
                     with col2:
-                        centroid2, min_angle_vertex2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2[0])          
-                        fig2, polygon_angles2, vertex_angles2 = plot_polygon_and_image(polygon2[0], centroid2, min_angle_vertex2, vertex_angles2, sorted_angles2, polygon_angles2)
+                        centroid2, sorted_vertices2, vertex_angles2, sorted_angles2, polygon_angles2 = calculate_angles(polygon2[0])
+                        fig2, polygon_angles2, vertex_angles2 = plot_polygon_and_image(polygon2[0], centroid2, vertex_angles2, sorted_angles2, polygon_angles2)
                         st.pyplot(fig2)
                         st.write(f"Similar Polygon {i+1}")
-                        value_similar = np.concatenate([vertex_angles2, sorted(polygon_angles2)]).tolist()
-                        st.write(value_similar)
-                    
+                        value_similar = np.concatenate([vertex_angles2, polygon_angles2]).tolist()
+                        ui.badges([(f"Vertex angles:", 'secondary')], key=f"vertex_angles_similar{i}")
+                        st.write(vertex_angles2)
+                        ui.badges([(f"Polygon angles:", 'secondary')], key=f"polygon_angles_similar{i}")
+                        st.write(polygon_angles2)
+
+
                     st.write("---")
     elif search_button and image is None:
         search_error.error("Please upload an image to search")
