@@ -37,7 +37,6 @@ def classify_image_tflite(image, interpreter):
 def compare_image(input_image, image_set, window_step, min_similarity, min_similar_ratio, k1,k2, interpreter):
     polygons_input = extract_polygons(input_image)
     input_polygon_count = len(polygons_input)
-
     results = []
     max_score = 0
     best_window = None
@@ -76,10 +75,12 @@ def compare_image(input_image, image_set, window_step, min_similarity, min_simil
                     if similarity_scores >= min_similarity:
                         matched_polygons += 1
                         matched_polygon_types.append(input_classification)
+                        # matched_polygon_types.append('special')
                         used_polygons_input.add(i)
                         used_polygons_image.add(j)
                         matched_polygon_details.append({
                             'type': input_classification,
+                            # 'type': 'special',
                             'input_vertices': vertices_input,
                             'matched_vertices': vertices_image,
                             'similarity_score': similarity_scores

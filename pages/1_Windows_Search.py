@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from PIL import Image
 import heapq
-# from process_image.compare_polygon import 
+# from process_image.compare_polygon import
 # from process_image.compare_cluster import process_image_and_find_similar_cluster, process_cluster, display_results, compare_images_knn, plot_matching_clusters_knn
 from process_image.windows_search import *
 import io, base64
@@ -14,11 +14,10 @@ import streamlit_shadcn_ui as ui
 from htbuilder import HtmlElement, div, ul, li, br, hr, a, p, img, styles, classes, fonts
 from htbuilder.units import percent, px
 from htbuilder.funcs import rgba, rgb
-import pandas as pd
-from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
 from keras.models import load_model
 import tensorflow as tf
+from shapely.geometry import Polygon, MultiPolygon
+from shapely.ops import unary_union
 st.set_page_config(page_title="Starwar Project", page_icon="🌏")
 
 def read_image_2(uploaded_file):
@@ -114,18 +113,18 @@ def detect_windows_and_upscale(image, window_size, stride, sr):
         row = []
         for x in range(0, image.shape[1] - window_size[0] + 1, stride):
             window = image[y:y + window_size[1], x:x + window_size[0]]
-            
+
             # Đảm bảo window có 3 kênh màu
             if window.shape[2] != 3:
                 window = cv2.cvtColor(window, cv2.COLOR_BGRA2BGR)
-            
+
             # Thử catch lỗi khi upsample
             try:
                 upscaled_window = sr.upsample(window)
             except Exception as e:
                 print(f"Error upscaling window at ({x}, {y}): {e}")
                 upscaled_window = window  # Sử dụng window gốc nếu upscale thất bại
-            
+
             row.append(upscaled_window)
         windows.append(row)
 
@@ -149,6 +148,57 @@ def display_windows(windows):
     with st.expander("Windows:", expanded=True):
         st.pyplot(fig)
 
+def update_and_display_polygons(buffer_distance, min_area, max_area, image2, upload_info):
+    polygons = extract_polygons_adjustable(image2, min_vertices=3, min_area=min_area, max_area=max_area)
+
+    buffered_polygons = [Polygon(poly[0]).buffer(buffer_distance) for poly in polygons]
+    merged_polygon = unary_union(buffered_polygons)
+    final_polygon = merged_polygon.buffer(-buffer_distance)
+
+    if isinstance(final_polygon, MultiPolygon):
+        list_polygons_input = [(list(poly.exterior.coords), None) for poly in final_polygon.geoms]
+    else:
+        list_polygons_input = [(list(final_polygon.exterior.coords), None)]
+    # print(list_polygons_input)
+    if upload_info:
+        if len(list_polygons_input[0][0]) == 0:
+            upload_info.info("Please upload an image with polygons or adjust the buffer distance and area range")
+            return None, 0
+    merged_image_buffer = plot_polygons(list_polygons_input, '')
+    merged_image_pil = Image.open(merged_image_buffer)
+    merged_image_array = np.array(merged_image_pil)
+
+    fig_m, ax_m = plt.subplots(figsize=(10, 10))
+    ax_m.imshow(merged_image_array)
+    num_polygons = len(list_polygons_input)
+    ax_m.axis('off')
+
+    # Chuyển fig thành image
+    buf = io.BytesIO()
+    fig_m.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    img = Image.open(buf)
+
+    plt.close(fig_m)
+
+    return img, num_polygons
+
+def listing_polygon_input(image):
+    # Convert PIL image to NumPy array if necessary
+    if isinstance(image, Image.Image):
+        image = np.array(image)
+
+    # Debugging: print image shapes to ensure they are loaded correctly
+    print(f"Image shape: {image.shape}")
+
+    # Extract polygons from both images
+    if image is not None and len(image.shape) == 3:
+        list_polygons = extract_polygons(image)
+    else:
+        raise ValueError(f"Invalid image: shape = {image.shape if image is not None else None}")
+
+    return list_polygons
+
 @st.cache_data
 def preprocess_sample_windows():
     image_path = sample_map_path
@@ -169,7 +219,7 @@ def preprocess_sample_windows():
 SAMPLE_WINDOWS, IMAGE_PLOT = preprocess_sample_windows()
 
 def main():
-    
+
     st.markdown("""
     <style>
         .st-emotion-cache-13ln4jf{
@@ -225,7 +275,7 @@ def main():
         st.write("")
         st.write("")
         st.write("")
-        
+
         st.image(image_path_eu)
     st.logo(image_path_logo1)
     if "windows" not in st.session_state:
@@ -296,61 +346,120 @@ def main():
     if st.session_state.windows:
         display_windows(st.session_state.windows)
     search_error = st.empty()
-    with st.expander("Upload Images", expanded=True):
-        with st.form("parameters_form"):
-            col = st.columns(3)
-            with col[0]:
-                top_n = st.number_input("Select Top n", min_value=1, max_value=10, value=5, step=1, key="top_n_input")
-                min_similarity = st.number_input("Select Min Similarity", min_value=50, max_value=100, value=80, step=5, key="min_similarity_input")
-            with col[1]:
-                k1 = st.number_input("Select K1", min_value=0, max_value=50, value=15, step=5, key="k1_input")
-                min_similar_ratio = st.number_input("Select Min Similar Polygon Ratio", min_value=0.1, max_value=1.0, value=0.5, step=0.1, key="min_similar_ratio_input")
-            with col[2]:
-                k2 = st.number_input("Select K2", min_value=4, max_value=10, value=5, step=1, key="k2_input")
-                window_step = st.number_input("Select Window Step", min_value=1, max_value=5, value=2, step=1, key="window_step_input")
-            with st.popover("Documents"):
-                st.markdown("""
-                            - **Top_n**: The number of top scoring windows to be returned. Adjacent windows with similar scores will be merged if they are contiguous. Windows with a score of 0 will not be illustrated.
+    merge_option = st.toggle("Merge", value=False)
+    if not merge_option:
+        with st.expander("Upload Images", expanded=True):
+            with st.form("parameters_form"):
+                col = st.columns(3)
+                with col[0]:
+                    top_n = st.number_input("Select Top n", min_value=1, max_value=10, value=5, step=1, key="top_n_input")
+                    min_similarity = st.number_input("Select Min Similarity", min_value=50, max_value=100, value=80, step=5, key="min_similarity_input")
+                with col[1]:
+                    k1 = st.number_input("Select K1", min_value=0, max_value=50, value=15, step=5, key="k1_input")
+                    min_similar_ratio = st.number_input("Select Min Similar Polygon Ratio", min_value=0.1, max_value=1.0, value=0.5, step=0.1, key="min_similar_ratio_input")
+                with col[2]:
+                    k2 = st.number_input("Select K2", min_value=4, max_value=10, value=5, step=1, key="k2_input")
+                    window_step = st.number_input("Select Window Step", min_value=1, max_value=5, value=2, step=1, key="window_step_input")
+                with st.popover("Documents"):
+                    st.markdown("""
+                                - **Top_n**: The number of top scoring windows to be returned. Adjacent windows with similar scores will be merged if they are contiguous. Windows with a score of 0 will not be illustrated.
 
-                            - **K1**: The tolerance angle (degrees).
+                                - **K1**: The tolerance angle (degrees).
 
-                            - **K2**: The minimum subsequence length.
+                                - **K2**: The minimum subsequence length.
 
-                            - **Min Similarity**: The minimum percentage similarity required to determine that a pair of polygons matches.
+                                - **Min Similarity**: The minimum percentage similarity required to determine that a pair of polygons matches.
 
-                            - **Min Similar Polygon Ratio**: The minimum polygon similarity ratio for early stopping.
+                                - **Min Similar Polygon Ratio**: The minimum polygon similarity ratio for early stopping.
 
-                            - **Window Step**: The step size for window searching (Smaller steps lead to higher accuracy but take more time to search).
-                            """)
+                                - **Window Step**: The step size for window searching (Smaller steps lead to higher accuracy but take more time to search).
+                                """)
+                uploaded_image = st.file_uploader("Upload an image to search", type=["jpg", "jpeg", "png"], key="image_uploader")
+                if uploaded_image is not None:
+                    # image2 = Image.open(uploaded_image)
+                    # image2 = np.array(image2)
+                    buffer_distance = st.number_input("Select Buffer Distance", min_value=0.0, max_value=5.0, value=1.0, step=0.1, key="buffer_distance_input")
+                    min_area, max_area = st.select_slider("Select Area Range", options=[0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 10000, 25000, 50000, 100000], value=(0, 10000))
+                    image2 = read_image_2(uploaded_image)
+                    if image2.shape[2] == 4:
+                        image2 = cv2.cvtColor(image2, cv2.COLOR_BGRA2BGR)
+                    # image2 = sr.upsample(image2)
+                search_button = st.form_submit_button("Search")
+    if merge_option:
+        upload_info = st.empty()
+        with st.expander("Upload Images", expanded=True):
             uploaded_image = st.file_uploader("Upload an image to search", type=["jpg", "jpeg", "png"], key="image_uploader")
             if uploaded_image is not None:
-                # image2 = Image.open(uploaded_image)
-                # image2 = np.array(image2)
-                
                 image2 = read_image_2(uploaded_image)
                 if image2.shape[2] == 4:
                     image2 = cv2.cvtColor(image2, cv2.COLOR_BGRA2BGR)
-                # image2 = sr.upsample(image2)
-            search_button = st.form_submit_button("Search")
+            buffer_distance = st.number_input("Select Buffer Distance", min_value=0.0, max_value=5.0, value=1.0, step=0.1, key="buffer_distance_input")
+            min_area, max_area = st.select_slider("Select Area Range", options=[0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 10000, 25000, 50000, 100000], value=(0, 10000))
+
+            if (min_area and max_area) :
+            # Sử dụng st.empty() để tạo một vùng có thể cập nhật
+                image2, num_polygons_input = update_and_display_polygons(buffer_distance, min_area, max_area, image2, upload_info)
+                if image2:
+                    ui.badges([(f"Number of polygons input: {num_polygons_input}",'secondary')], key=f"badge_input")
+                    polygon_plot = st.empty()
+                    polygon_plot.image(image2)
+                    #Lấy vertices của polygon (ảnh black-white)
+                    list_polygons_input = listing_polygon_input(image2)
+                    print(list_polygons_input)
+                    print(80 * "_")
+                    # print(f"list_polygons_input: {list_polygons_input}")
+                    if (len(list_polygons_input) > 0):
+                        print(f"input vertices: {list_polygons_input[0][0]}")
+                    if len(list_polygons_input) == 0:
+                        upload_info.info("Please upload an image with polygons or adjust the buffer distance and area range")
+                    print(f"Number of polygons input.: {len(list_polygons_input)}")
+            with st.form("parameters_form"):
+                col = st.columns(3)
+                with col[0]:
+                    top_n = st.number_input("Select Top n", min_value=1, max_value=10, value=5, step=1, key="top_n_input")
+                    min_similarity = st.number_input("Select Min Similarity", min_value=50, max_value=100, value=80, step=5, key="min_similarity_input")
+                with col[1]:
+                    k1 = st.number_input("Select K1", min_value=0, max_value=50, value=15, step=5, key="k1_input")
+                    min_similar_ratio = st.number_input("Select Min Similar Polygon Ratio", min_value=0.1, max_value=1.0, value=0.5, step=0.1, key="min_similar_ratio_input")
+                with col[2]:
+                    k2 = st.number_input("Select K2", min_value=4, max_value=10, value=5, step=1, key="k2_input")
+                    window_step = st.number_input("Select Window Step", min_value=1, max_value=5, value=2, step=1, key="window_step_input")
+                with st.popover("Documents"):
+                    st.markdown("""
+                                - **Top_n**: The number of top scoring windows to be returned. Adjacent windows with similar scores will be merged if they are contiguous. Windows with a score of 0 will not be illustrated.
+
+                                - **K1**: The tolerance angle (degrees).
+
+                                - **K2**: The minimum subsequence length.
+
+                                - **Min Similarity**: The minimum percentage similarity required to determine that a pair of polygons matches.
+
+                                - **Min Similar Polygon Ratio**: The minimum polygon similarity ratio for early stopping.
+
+                                - **Window Step**: The step size for window searching (Smaller steps lead to higher accuracy but take more time to search).
+                                """)
+                search_button = st.form_submit_button("Search")
         # search_button = st.button("Search")
     if (search_button and image2 is not None) or (search_sample and image2 is not None):
         # So sánh ảnh tìm kiếm với các cửa sổ trong ảnh tải lên
         if st.session_state.windows:
-            results = compare_image(image2, st.session_state.windows, 
-                                    window_step=window_step, 
-                                    min_similarity=min_similarity, 
+            results = compare_image(image2, st.session_state.windows,
+                                    window_step=window_step,
+                                    min_similarity=min_similarity,
                                     min_similar_ratio=min_similar_ratio,
                                     k1=k1,
-                                    k2=k2, 
-                                    interpreter=interpreter)
+                                    k2=k2,
+                                    interpreter=interpreter
+                                    )
         else:
-            results = compare_image(image2, st.session_state.sample_windows, 
-                                    window_step=window_step, 
-                                    min_similarity=min_similarity, 
+            results = compare_image(image2, st.session_state.sample_windows,
+                                    window_step=window_step,
+                                    min_similarity=min_similarity,
                                     min_similar_ratio=min_similar_ratio,
                                     k1=k1,
-                                    k2=k2, 
-                                    interpreter=interpreter)
+                                    k2=k2,
+                                    interpreter=interpreter
+                                    )
         filtered_results = [item for item in results if item['score'] > 0]
         top_results = heapq.nlargest(top_n, filtered_results, key=lambda x: x['score'])
         colors = [(0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255)]
