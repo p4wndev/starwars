@@ -34,15 +34,180 @@ def classify_image_tflite(image, interpreter):
     return class_names[int(np.argmax(output_data))]
 
 
-def compare_image(input_image, image_set, window_step, min_similarity, min_similar_ratio, k1,k2, interpreter):
+# def compare_image(input_image, image_set, window_step, min_similarity, min_similar_ratio, k1,k2, interpreter):
+#     polygons_input = extract_polygons(input_image)
+#     input_polygon_count = len(polygons_input)
+#     results = []
+#     max_score = 0
+#     best_window = None
+
+#     for idx in range(0, len(image_set), window_step):  # Nhảy cóc qua các hàng, mỗi lần nhảy window_step cửa sổ
+#         for col in range(0, len(image_set[0]), window_step):  # Nhảy cóc qua các cột, mỗi lần nhảy window_step cửa sổ
+#             image = image_set[idx][col]
+#             polygons_image = extract_polygons(image)
+#             matched_polygons = 0
+#             total_polygons = len(polygons_image)
+#             matched_polygon_types = []
+#             matched_polygon_details = []
+
+#             used_polygons_input = set()
+#             used_polygons_image = set()
+
+#             early_stop = False
+
+#             for i, (vertices_input, cropped_polygon_input) in enumerate(polygons_input):
+#                 if i in used_polygons_input:
+#                     continue
+
+#                 if len(vertices_input) <= 4:
+#                     continue
+#                 input_classification = classify_image_tflite(cropped_polygon_input, interpreter)
+
+#                 if input_classification == 'normal_polygon':
+#                     continue
+
+#                 for j, (vertices_image, cropped_polygon_image) in enumerate(polygons_image):
+#                     if j in used_polygons_image:
+#                         continue
+#                     if len(vertices_image) <= 4:
+#                         continue
+#                     similarity_scores = process_image_and_find_similar_polygons_2(vertices_input, vertices_image, k1, k2)
+#                     if similarity_scores >= min_similarity:
+#                         matched_polygons += 1
+#                         matched_polygon_types.append(input_classification)
+#                         # matched_polygon_types.append('special')
+#                         used_polygons_input.add(i)
+#                         used_polygons_image.add(j)
+#                         matched_polygon_details.append({
+#                             'type': input_classification,
+#                             # 'type': 'special',
+#                             'input_vertices': vertices_input,
+#                             'matched_vertices': vertices_image,
+#                             'similarity_score': similarity_scores
+#                         })
+
+#                         # if similarity_scores == 100 or matched_polygons >= 0.5 * input_polygon_count:
+#                         if matched_polygons >= min_similar_ratio * input_polygon_count:
+#                             early_stop = True
+#                             break
+
+#                 if early_stop:
+#                     break
+
+#             polygon_type_counts = {
+#                 'special_polygon': matched_polygon_types.count('special_polygon'),
+#                 'superhero_polygon': matched_polygon_types.count('superhero_polygon')
+#             }
+
+#             score = (polygon_type_counts['special_polygon'] * 1 +
+#                      polygon_type_counts['superhero_polygon'] * 3) #
+
+#             if score > max_score:
+#                 max_score = score
+#                 best_window = {'row': idx, 'col': col, 'score': score, 'matched_polygons': matched_polygons,
+#                                'matched_polygon_details': matched_polygon_details, 'polygon_type_counts': polygon_type_counts}
+
+#             results.append({
+#                 'row': idx,
+#                 'col': col,
+#                 'matched_polygons': matched_polygons,
+#                 'total_polygons_input': input_polygon_count,
+#                 'total_polygons_compared': total_polygons,
+#                 'polygon_type_counts': polygon_type_counts,
+#                 'score': score,
+#                 'matched_polygon_details': matched_polygon_details
+#             })
+
+#             if early_stop:
+#                 break
+#         if early_stop:
+#             break
+
+#     if best_window:
+#         row, col = best_window['row'], best_window['col']
+#         # directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+#         directions = [
+#             (-1, -1), (-1, 0), (-1, 1),  # Hàng trên: trái, giữa, phải
+#             (0, -1),         (0, 1),      # Hàng giữa: trái, phải (trung tâm là (0, 0))
+#             (1, -1), (1, 0), (1, 1)       # Hàng dưới: trái, giữa, phải
+#         ]
+
+#         for drow, dcol in directions:
+#             new_row, new_col = row + drow, col + dcol
+#             if 0 <= new_row < len(image_set) and 0 <= new_col < len(image_set[0]):
+#                 image = image_set[new_row][new_col]
+#                 polygons_image = extract_polygons(image)
+#                 matched_polygons = 0
+#                 matched_polygon_types = []
+#                 matched_polygon_details = []
+
+#                 used_polygons_input = set()
+#                 used_polygons_image = set()
+
+#                 for i, (vertices_input, cropped_polygon_input) in enumerate(polygons_input):
+#                     if i in used_polygons_input:
+#                         continue
+
+#                     input_classification = classify_image_tflite(cropped_polygon_input, interpreter)
+
+#                     if input_classification == 'normal_polygon':
+#                         continue
+
+#                     for j, (vertices_image, cropped_polygon_image) in enumerate(polygons_image):
+#                         if j in used_polygons_image:
+#                             continue
+#                         similarity_scores = process_image_and_find_similar_polygons_2(vertices_input, vertices_image, k1, k2)
+#                         if similarity_scores >= min_similarity:
+#                             matched_polygons += 1
+#                             matched_polygon_types.append(input_classification)
+#                             used_polygons_input.add(i)
+#                             used_polygons_image.add(j)
+#                             matched_polygon_details.append({
+#                                 'type': input_classification,
+#                                 'input_vertices': vertices_input,
+#                                 'matched_vertices': vertices_image,
+#                                 'similarity_score': similarity_scores
+#                             })
+
+#                             # if similarity_scores == 100 or matched_polygons >= 0.5 * input_polygon_count:
+#                             if matched_polygons >= min_similar_ratio * input_polygon_count:
+
+#                                 early_stop = True
+#                                 break
+
+#                     if early_stop:
+#                         break
+
+#                 polygon_type_counts = {
+#                     'special_polygon': matched_polygon_types.count('special_polygon'),
+#                     'superhero_polygon': matched_polygon_types.count('superhero_polygon')
+#                 }
+
+#                 score = (polygon_type_counts['special_polygon'] * 1 +
+#                          polygon_type_counts['superhero_polygon'] * 3)
+
+#                 results.append({
+#                     'row': new_row,
+#                     'col': new_col,
+#                     'matched_polygons': matched_polygons,
+#                     'total_polygons_input': input_polygon_count,
+#                     'total_polygons_compared': len(polygons_image),
+#                     'polygon_type_counts': polygon_type_counts,
+#                     'score': score,
+#                     'matched_polygon_details': matched_polygon_details
+#                 })
+
+#     return results
+
+#Top 3 best windows
+def compare_image(input_image, image_set, window_step, min_similarity, min_similar_ratio, k1, k2, interpreter):
     polygons_input = extract_polygons(input_image)
     input_polygon_count = len(polygons_input)
     results = []
-    max_score = 0
-    best_window = None
+    top_windows = []
 
-    for idx in range(0, len(image_set), window_step):  # Nhảy cóc qua các hàng, mỗi lần nhảy window_step cửa sổ
-        for col in range(0, len(image_set[0]), window_step):  # Nhảy cóc qua các cột, mỗi lần nhảy window_step cửa sổ
+    for idx in range(0, len(image_set), window_step):
+        for col in range(0, len(image_set[0]), window_step):
             image = image_set[idx][col]
             polygons_image = extract_polygons(image)
             matched_polygons = 0
@@ -56,37 +221,31 @@ def compare_image(input_image, image_set, window_step, min_similarity, min_simil
             early_stop = False
 
             for i, (vertices_input, cropped_polygon_input) in enumerate(polygons_input):
-                if i in used_polygons_input:
+                if i in used_polygons_input or len(vertices_input) <= 4:
                     continue
 
-                if len(vertices_input) <= 4:
-                    continue
                 input_classification = classify_image_tflite(cropped_polygon_input, interpreter)
 
                 if input_classification == 'normal_polygon':
                     continue
 
                 for j, (vertices_image, cropped_polygon_image) in enumerate(polygons_image):
-                    if j in used_polygons_image:
+                    if j in used_polygons_image or len(vertices_image) <= 4:
                         continue
-                    if len(vertices_image) <= 4:
-                        continue
+
                     similarity_scores = process_image_and_find_similar_polygons_2(vertices_input, vertices_image, k1, k2)
                     if similarity_scores >= min_similarity:
                         matched_polygons += 1
                         matched_polygon_types.append(input_classification)
-                        # matched_polygon_types.append('special')
                         used_polygons_input.add(i)
                         used_polygons_image.add(j)
                         matched_polygon_details.append({
                             'type': input_classification,
-                            # 'type': 'special',
                             'input_vertices': vertices_input,
                             'matched_vertices': vertices_image,
                             'similarity_score': similarity_scores
                         })
 
-                        # if similarity_scores == 100 or matched_polygons >= 0.5 * input_polygon_count:
                         if matched_polygons >= min_similar_ratio * input_polygon_count:
                             early_stop = True
                             break
@@ -100,14 +259,9 @@ def compare_image(input_image, image_set, window_step, min_similarity, min_simil
             }
 
             score = (polygon_type_counts['special_polygon'] * 1 +
-                     polygon_type_counts['superhero_polygon'] * 3) #
+                     polygon_type_counts['superhero_polygon'] * 3)
 
-            if score > max_score:
-                max_score = score
-                best_window = {'row': idx, 'col': col, 'score': score, 'matched_polygons': matched_polygons,
-                               'matched_polygon_details': matched_polygon_details, 'polygon_type_counts': polygon_type_counts}
-
-            results.append({
+            window_result = {
                 'row': idx,
                 'col': col,
                 'matched_polygons': matched_polygons,
@@ -116,21 +270,27 @@ def compare_image(input_image, image_set, window_step, min_similarity, min_simil
                 'polygon_type_counts': polygon_type_counts,
                 'score': score,
                 'matched_polygon_details': matched_polygon_details
-            })
+            }
 
-            if early_stop:
-                break
-        if early_stop:
-            break
+            results.append(window_result)
 
-    if best_window:
+            # Update top_windows
+            if len(top_windows) < 3:
+                top_windows.append(window_result)
+                top_windows.sort(key=lambda x: x['score'], reverse=True)
+            elif score > top_windows[-1]['score']:
+                top_windows[-1] = window_result
+                top_windows.sort(key=lambda x: x['score'], reverse=True)
+
+    # Process neighboring windows for top 3
+    directions = [
+        (-1, -1), (-1, 0), (-1, 1),
+        (0, -1),         (0, 1),
+        (1, -1), (1, 0), (1, 1)
+    ]
+
+    for best_window in top_windows:
         row, col = best_window['row'], best_window['col']
-        # directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
-        directions = [
-            (-1, -1), (-1, 0), (-1, 1),  # Hàng trên: trái, giữa, phải
-            (0, -1),         (0, 1),      # Hàng giữa: trái, phải (trung tâm là (0, 0))
-            (1, -1), (1, 0), (1, 1)       # Hàng dưới: trái, giữa, phải
-        ]
 
         for drow, dcol in directions:
             new_row, new_col = row + drow, col + dcol
@@ -169,13 +329,10 @@ def compare_image(input_image, image_set, window_step, min_similarity, min_simil
                                 'similarity_score': similarity_scores
                             })
 
-                            # if similarity_scores == 100 or matched_polygons >= 0.5 * input_polygon_count:
                             if matched_polygons >= min_similar_ratio * input_polygon_count:
-
-                                early_stop = True
                                 break
 
-                    if early_stop:
+                    if matched_polygons >= min_similar_ratio * input_polygon_count:
                         break
 
                 polygon_type_counts = {
@@ -186,7 +343,7 @@ def compare_image(input_image, image_set, window_step, min_similarity, min_simil
                 score = (polygon_type_counts['special_polygon'] * 1 +
                          polygon_type_counts['superhero_polygon'] * 3)
 
-                results.append({
+                neighbor_result = {
                     'row': new_row,
                     'col': new_col,
                     'matched_polygons': matched_polygons,
@@ -195,9 +352,12 @@ def compare_image(input_image, image_set, window_step, min_similarity, min_simil
                     'polygon_type_counts': polygon_type_counts,
                     'score': score,
                     'matched_polygon_details': matched_polygon_details
-                })
+                }
+
+                results.append(neighbor_result)
 
     return results
+
 
 # Các hàm còn lại không thay đổi
 def draw_rectangles_on_image(image, positions, window_size, colors, top_n, scores):

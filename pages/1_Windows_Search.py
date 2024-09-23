@@ -352,7 +352,7 @@ def main():
             with st.form("parameters_form"):
                 col = st.columns(3)
                 with col[0]:
-                    top_n = st.number_input("Select Top n", min_value=1, max_value=10, value=5, step=1, key="top_n_input")
+                    top_n = st.number_input("Select Top n", min_value=1, max_value=20, value=5, step=1, key="top_n_input")
                     min_similarity = st.number_input("Select Min Similarity", min_value=50, max_value=100, value=80, step=5, key="min_similarity_input")
                 with col[1]:
                     k1 = st.number_input("Select K1", min_value=0, max_value=50, value=15, step=5, key="k1_input")

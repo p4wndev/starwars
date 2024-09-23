@@ -550,12 +550,12 @@ def plot_polygon_and_circle_2(image_cluster, results):
         centroid = tuple(map(int, centroid))
 
         # Tính toán độ dày phù hợp
-        polygon_thickness = max(1, int(thickness_scale) * 2)
+        polygon_thickness = max(1, int(thickness_scale) )
         circle_thickness = max(2, int(thickness_scale * 2))
         text_thickness = max(1, int(thickness_scale))
 
         # Vẽ đa giác
-        cv2.polylines(image_cluster, [vertices], isClosed=True, color=(255, 0, 0), thickness=polygon_thickness)
+        cv2.polylines(image_cluster, [vertices], isClosed=True, color=(0, 255, 0), thickness=polygon_thickness)
 
         # Vẽ vòng tròn quanh tâm
         radius = int(max(np.linalg.norm(vertices - centroid, axis=1)))

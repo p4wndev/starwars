@@ -330,8 +330,8 @@ def main():
 
             centroid_input, sorted_vertices_input, vertex_angles_input, sorted_angles_input, polygon_angles_input = calculate_angles(list_polygons_input[0][0])
             fig_input, polygon_angles_input, vertex_angles_input = plot_polygon_and_image(list_polygons_input[0][0], centroid_input, vertex_angles_input, sorted_angles_input, polygon_angles_input)
-            st.pyplot(result_img)
-
+            # st.pyplot(result_img)
+            st.image(result_img)
             with st.expander("Detailed Results"):
                 for i, (polygon1, polygon2, similarity, vertices, centroid) in enumerate(result[:top_n]):
                     ui.badges([(f"Similarity Result {i+1}: {similarity:.2f}%", 'primary')], key=f"similarity_badge_{i}")
