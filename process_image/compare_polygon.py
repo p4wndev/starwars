@@ -401,7 +401,7 @@ def process_image_and_find_similar_polygons_2(image1, image2, top_n=1, progress_
     return result_rgb, highest_similarity, similarity_scores, error_message
 
 
-def process_image_and_find_similar_polygons(image1, image2, top_n=1, progress_callback=None, is_one_vs_one=False, compare_mode="polygon_vs_polygon", option="Subarrays", k1=5, k2=3):
+def process_image_and_find_similar_polygons(image1, image2, top_n=1, progress_callback=None, is_one_vs_one=False, compare_mode="polygon_vs_polygon", option="Subarrays", k1=5, k2=3, vertex_angle_weight=0.5):
     if progress_callback:
         progress_callback(1)  # Update progress to 1%
     # Extract polygons
@@ -432,7 +432,7 @@ def process_image_and_find_similar_polygons(image1, image2, top_n=1, progress_ca
         if option == "Subarrays":
             similarity_1 = calculate_percentage_match(vertex_angles1, vertex_angles2, k1, k2)
             similarity_2 = calculate_percentage_match(polygon_angles1, polygon_angles2, k1, k2)
-            similarity = (similarity_1 * 0.7 + similarity_2 * 0.3)
+            similarity = (similarity_1 * vertex_angle_weight  + similarity_2 * (1- vertex_angle_weight ))
             similarity_scores.append((similarity, vertices, cropped_image, centroid1, sorted_vertices1, vertex_angles1, sorted_angles1))
             similarity_scores = sorted(similarity_scores, key=lambda x: x[0], reverse=True)[:top_n]
 
@@ -574,7 +574,7 @@ def plot_polygon_and_circle_2(image_cluster, results):
     result_img_enhanced = cv2.cvtColor(result_img_hsv, cv2.COLOR_HSV2BGR)
     return result_img_enhanced
 
-def compare_polygon(polygon1, polygon2, k1=15, k2=5):
+def compare_polygon(polygon1, polygon2, k1=15, k2=5, vertex_angle_weight=0.5):
     # Tính toán các góc cho polygon1
     centroid1, sorted_vertices1, vertex_angles1, sorted_angles1, polygon_angles1 = calculate_angles(polygon1)
     # Tính toán các góc cho polygon2
@@ -582,10 +582,10 @@ def compare_polygon(polygon1, polygon2, k1=15, k2=5):
     # Tính độ tương đồng
     similarity1 = calculate_percentage_match(polygon_angles1, polygon_angles2, k1, k2)
     similarity2 = calculate_percentage_match(vertex_angles1, vertex_angles2, k1, k2)
-    similarity = (similarity1 * 0.5 + similarity2 * 0.5)
+    similarity = (similarity1 * vertex_angle_weight + similarity2 * (1- vertex_angle_weight))
     return similarity, sorted_vertices2, centroid2
 
-def find_polygon(image2, polygons1, polygons2, top_n=5, stop_threshold=95, k1=15, k2=3):
+def find_polygon(image2, polygons1, polygons2, top_n=5, stop_threshold=95, k1=15, k2=3, vertex_angle_weight=0.5):
     # Debugging: print number of polygons found
     print(f"Number of polygons in image1: {len(polygons1)}")
     print(f"Number of polygons in image2: {len(polygons2)}")
@@ -596,7 +596,7 @@ def find_polygon(image2, polygons1, polygons2, top_n=5, stop_threshold=95, k1=15
         if len(polygon1[0]) <= 4:
             continue
         for polygon2 in polygons2:
-            similarity, vertices, centroid = compare_polygon(polygon1[0], polygon2[0], k1=k1, k2=k2)
+            similarity, vertices, centroid = compare_polygon(polygon1[0], polygon2[0], k1=k1, k2=k2, vertex_angle_weight=vertex_angle_weight)
             print(f"Similarity {i}: {similarity}")
             i += 1
             # Append to results if conditions are met

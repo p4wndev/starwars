@@ -165,6 +165,7 @@ def polygon_vs_polygon():
                 k1 = st.number_input("Choose the tolerance angle (Degrees)", min_value=1, max_value=50, value=5, step=1, key="polygon_vs_polygon_number_input")
             with col[1]:
                 k2 = st.number_input("Choose the minimum subsequence length", min_value=2, max_value=50, value=3, step=1, key="min_subsequence_length")
+            vertex_angle_weight = st.slider("Vertex Angles Weight", min_value=0.0, max_value=1.0, value=0.5, step=0.1, key='pvp_vertex_angle_weight')
         col1, col2 = st.columns(2)
 
         with col1:
@@ -202,8 +203,8 @@ def polygon_vs_polygon():
                     error_container.error("Error: One or both images could not be read.")
                 else:
                     if option == "Subarrays":
-                        result_rgb, highest_similarity, similarity_scores, error_message = process_image_and_find_similar_polygons(image1, image2, top_n=1, progress_callback=None, is_one_vs_one=True, option=option, k1=k1, k2=k2)
-                        img22,_,_,_ = process_image_and_find_similar_polygons(img22,img11 , top_n=1, progress_callback=None, is_one_vs_one=True, option=option, k1=k1, k2=k2)
+                        result_rgb, highest_similarity, similarity_scores, error_message = process_image_and_find_similar_polygons(image1, image2, top_n=1, progress_callback=None, is_one_vs_one=True, option=option, k1=k1, k2=k2, vertex_angle_weight=vertex_angle_weight)
+                        img22,_,_,_ = process_image_and_find_similar_polygons(img22,img11 , top_n=1, progress_callback=None, is_one_vs_one=True, option=option, k1=k1, k2=k2,vertex_angle_weight=vertex_angle_weight)
                         if error_message:
                             error_container.error(error_message)
                         else:
@@ -336,8 +337,8 @@ def polygon_vs_polygon():
                                         if len(similarity_scores) == 0:
                                             st.write("No polygons found for explanation.")
                     else:
-                        result_rgb, highest_similarity, similarity_scores, error_message = process_image_and_find_similar_polygons(image1, image2, top_n=1, progress_callback=None, is_one_vs_one=True, option=option)
-                        img22,_,_,_ = process_image_and_find_similar_polygons(img22,img11 , top_n=1, progress_callback=None, is_one_vs_one=True, option=option)
+                        result_rgb, highest_similarity, similarity_scores, error_message = process_image_and_find_similar_polygons(image1, image2, top_n=1, progress_callback=None, is_one_vs_one=True, option=option,vertex_angle_weight=vertex_angle_weight)
+                        img22,_,_,_ = process_image_and_find_similar_polygons(img22,img11 , top_n=1, progress_callback=None, is_one_vs_one=True, option=option,vertex_angle_weight=vertex_angle_weight)
                         if error_message:
                             error_container.error(error_message)
                         else:
@@ -467,7 +468,7 @@ def polygon_vs_map():
                 k2 = st.number_input("Minimum subsequence length", min_value=2, max_value=50, value=3, step=1, key="min_subsequence_length_2")
             with col[2]:
                 top_n_1 = st.number_input("Select top N for comparison", min_value=1, max_value=10, value=1, step=1, key="polygon_vs_map_slider")
-
+            vertex_angle_weight = st.slider("Vertex Angles Weight", min_value=0.0, max_value=1.0, value=0.5, step=0.1, key='pvm_vertex_angle_weight')
         # top_n = st.select_slider("Select top N for comparison", options=[1, 2, 3, 4, 5], value=1, key="polygon_vs_map_slider")
         if option == "DTW":
             top_n_2 = st.number_input("Select top N for comparison", min_value=1, max_value=10, value=1, step=1, key="polygon_vs_map_slider_2")
@@ -514,7 +515,7 @@ def polygon_vs_map():
                         )
                     else:
                         result, highest_similarity, similarity_scores, error_message = process_image_and_find_similar_polygons(
-                            uploaded_file2_image, uploaded_file1_image,top_n_2, progress_callback=update_progress, compare_mode="polygon_vs_map", option=option
+                            uploaded_file2_image, uploaded_file1_image,top_n_2, progress_callback=update_progress, compare_mode="polygon_vs_map", option=option, vertex_angle_weight=vertex_angle_weight
                         )
                     if error_message:
                         error_container.error(error_message)

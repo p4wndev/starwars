@@ -101,7 +101,7 @@ def extract_polygons(image, min_vertices=3, max_area=300000):
                 polygons.append((flattened_vertices, cropped_image))
     return polygons
 
-def extract_polygons_adjustable(image, min_vertices=3,min_area=80, max_area=10000):
+def extract_polygons_adjustable(image, min_vertices=3,min_area=0, max_area=10000):
     image = np.array(image)
 
     # Check the number of channels in the image

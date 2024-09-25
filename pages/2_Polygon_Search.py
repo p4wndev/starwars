@@ -220,7 +220,7 @@ def main():
         list_polygon_form = st.sidebar.form("map_form")
         with list_polygon_form:
             buffer_distance_ = st.number_input("Select Buffer Distance", min_value=0.0, max_value=5.0, value=1.0, step=0.1, key="buffer_distance_input_")
-            min_area_, max_area_ = st.select_slider("Select Area Range", options=[0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 5000, 10000, 25000, 50000, 100000], value=(0, 10000))
+            min_area_, max_area_ = st.select_slider("Select Area Range", options=[50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 5000, 10000, 25000, 50000, 100000, 1000000], value=(50, 10000))
             create_list_polygon_button = list_polygon_form.form_submit_button("Create List Polygon")
         if create_list_polygon_button:
             # st.session_state.input_map = image
@@ -238,7 +238,9 @@ def main():
             if image2.shape[2] == 4:
                 image2 = cv2.cvtColor(image2, cv2.COLOR_BGRA2BGR)
         buffer_distance = st.number_input("Select Buffer Distance", min_value=0.0, max_value=5.0, value=1.0, step=0.1, key="buffer_distance_input")
-        min_area, max_area = st.select_slider("Select Area Range", options=[0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 10000, 25000, 50000, 100000], value=(0, 10000))
+        import sys
+        max_int = sys.maxsize
+        min_area, max_area = st.select_slider("Select Area Range", options=[50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 5000, 10000, 25000, 50000, 100000, 1000000], value=(50, 10000))
         if min_area and max_area:
             # Sử dụng st.empty() để tạo một vùng có thể cập nhật
             image_polygon, num_polygons_input = update_and_display_polygons(buffer_distance, min_area, max_area, image2, upload_info)
@@ -259,13 +261,14 @@ def main():
         with st.form("parameters_form"):
             col = st.columns(4)
             with col[0]:
-                top_n = st.number_input("Select Top n", min_value=1, max_value=10, value=5, step=1, key="top_n_input")
+                top_n = st.number_input("Select Top n", min_value=1, max_value=15, value=5, step=1, key="top_n_input")
             with col[1]:
-                k1 = st.number_input("Select K1", min_value=0, max_value=50, value=15, step=5, key="k1_input")
+                k1 = st.number_input("Select K1", min_value=0, max_value=50, value=15, step=1, key="k1_input")
             with col[2]:
                 k2 = st.number_input("Select K2", min_value=4, max_value=10, value=5, step=1, key="k2_input")
             with col[3]:
                 stop_threshold = st.number_input("Select Stop Threshold", min_value=50, max_value=100, value=95, step=5, key="stop_threshold_input")
+            vertex_angle_weight = st.slider("Vertex Angles Weight", min_value=0.0, max_value=1.0, value=0.5, step=0.1, key='pvp_vertex_angle_weight')
             with st.popover("Documents"):
                 st.markdown("""
                             - **Top n**: The number of top-scoring polygons to be returned in the results.
@@ -275,6 +278,8 @@ def main():
                             - **K2**: The minimum number of consecutive vertices that need to match between two polygons.
 
                             - **Stop Threshold**: The similarity threshold (in percentage) at which the search will stop if a polygon with similarity greater than or equal to this value is found.
+
+                            - **Vertex Angle Weight**: is a tuning parameter that allows you to adjust the relative importance of vertex angles compared to polygon angles in the similarity calculation.
                             """)
             search_button = st.form_submit_button("Search")
     if (search_button and image2 is not None) or (search_sample and image2 is not None):
@@ -287,7 +292,8 @@ def main():
                                               top_n=top_n,
                                               stop_threshold=stop_threshold,
                                               k1=k1,
-                                              k2=k2)
+                                              k2=k2,
+                                              vertex_angle_weight=vertex_angle_weight)
             centroid_input, sorted_vertices_input, vertex_angles_input, sorted_angles_input, polygon_angles_input = calculate_angles(list_polygons_input[0][0])
             fig_input, polygon_angles_input, vertex_angles_input = plot_polygon_and_image(list_polygons_input[0][0], centroid_input, vertex_angles_input, sorted_angles_input, polygon_angles_input)
             st.image(result_img)
@@ -326,7 +332,8 @@ def main():
                                               top_n=top_n,
                                               stop_threshold=stop_threshold,
                                               k1=k1,
-                                              k2=k2)
+                                              k2=k2,
+                                              vertex_angle_weight=vertex_angle_weight)
 
             centroid_input, sorted_vertices_input, vertex_angles_input, sorted_angles_input, polygon_angles_input = calculate_angles(list_polygons_input[0][0])
             fig_input, polygon_angles_input, vertex_angles_input = plot_polygon_and_image(list_polygons_input[0][0], centroid_input, vertex_angles_input, sorted_angles_input, polygon_angles_input)
