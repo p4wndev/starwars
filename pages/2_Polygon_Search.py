@@ -118,6 +118,11 @@ sample_input_2_path = os.path.join(current_dir[:-6], "images/", "sample_polygon_
 sample_input_3_path = os.path.join(current_dir[:-6], "images/", "sample_polygon_3.png")
 sample_input_4_path = os.path.join(current_dir[:-6], "images/", "sample_polygon_4.png")
 sample_input_5_path = os.path.join(current_dir[:-6], "images/", "sample_polygon_5.png")
+sample_input_6_path = os.path.join(current_dir[:-6], "images/", "sample_polygon_6.png")
+sample_input_7_path = os.path.join(current_dir[:-6], "images/", "sample_polygon_7.png")
+sample_input_8_path = os.path.join(current_dir[:-6], "images/", "sample_polygon_8.png")
+sample_input_9_path = os.path.join(current_dir[:-6], "images/", "sample_polygon_9.png")
+sample_input_10_path = os.path.join(current_dir[:-6], "images/", "sample_polygon_10.png")
 
 def main():
     st.markdown("""
@@ -195,8 +200,13 @@ def main():
                         sample_input_3_path,
                         sample_input_4_path,
                         sample_input_5_path,
+                        sample_input_6_path,
+                        sample_input_7_path,
+                        sample_input_8_path,
+                        sample_input_9_path,
+                        sample_input_10_path,
                     ],
-                    captions=["Sample 1", "Sample 2", "Sample 3", "Sample 4", "Sample 5"],
+                    captions=["Sample 1", "Sample 2", "Sample 3", "Sample 4", "Sample 5", "Sample 6", "Sample 7", "Sample 8", "Sample 9", "Sample 10"],
                 )
         sidebar_expander_col = sample_input_expander.columns(2)
         with sidebar_expander_col[0]:
@@ -231,33 +241,40 @@ def main():
             map_plot = st.empty()
             map_plot.image(map_image)
     search_error = st.empty()
+    merge_option = st.toggle("Merge", value=False)
     with st.expander("Upload Images", expanded=True):
         uploaded_image = st.file_uploader("Upload a polygon image", type=["jpg", "jpeg", "png"], key="image_uploader")
         if uploaded_image is not None:
             image2 = read_image_2(uploaded_image)
             if image2.shape[2] == 4:
                 image2 = cv2.cvtColor(image2, cv2.COLOR_BGRA2BGR)
-        buffer_distance = st.number_input("Select Buffer Distance", min_value=0.0, max_value=5.0, value=1.0, step=0.1, key="buffer_distance_input")
-        import sys
-        max_int = sys.maxsize
-        min_area, max_area = st.select_slider("Select Area Range", options=[50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 5000, 10000, 25000, 50000, 100000, 1000000], value=(50, 10000))
-        if min_area and max_area:
-            # Sử dụng st.empty() để tạo một vùng có thể cập nhật
-            image_polygon, num_polygons_input = update_and_display_polygons(buffer_distance, min_area, max_area, image2, upload_info)
-            # Cập nhật hình ảnh đa giác mỗi khi thay đổi giá trị min_area hoặc max_area
-            # num_polygons_plot.markdown(f"Number of polygons in input: {num_polygons_input}")
-            if image_polygon:
-                ui.badges([(f"Number of polygons input: {num_polygons_input}",'secondary')], key=f"badge_input")
-                polygon_plot = st.empty()
-                polygon_plot.image(image_polygon)
-                #Lấy vertices của polygon (ảnh black-white)
-                list_polygons_input = listing_polygon_input(image_polygon)
-                print(f"list_polygons_input: {list_polygons_input}")
-                if (len(list_polygons_input) > 0):
-                    print(f"input vertices: {list_polygons_input[0][0]}")
-                if len(list_polygons_input) == 0:
-                    upload_info.info("Please upload an image with polygons or adjust the buffer distance and area range")
-                print(f"Number of polygons input.: {len(list_polygons_input)}")
+        if merge_option:
+            buffer_distance = st.number_input("Select Buffer Distance", min_value=0.0, max_value=5.0, value=1.0, step=0.1, key="buffer_distance_input")
+            min_area, max_area = st.select_slider("Select Area Range", options=[50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 5000, 10000, 25000, 50000, 100000, 1000000], value=(50, 10000))
+            if min_area and max_area:
+                image_polygon, num_polygons_input = update_and_display_polygons(buffer_distance, min_area, max_area, image2, upload_info)
+                if image_polygon:
+                    ui.badges([(f"Number of polygons input: {num_polygons_input}",'secondary')], key=f"badge_input")
+                    polygon_plot = st.empty()
+                    polygon_plot.image(image_polygon)
+                    #Lấy vertices của polygon (ảnh black-white)
+                    list_polygons_input = listing_polygon_input(image_polygon)
+                    print(f"list_polygons_input: {list_polygons_input}")
+                    if (len(list_polygons_input) > 0):
+                        print(f"input vertices: {list_polygons_input[0][0]}")
+                    if len(list_polygons_input) == 0:
+                        upload_info.info("Please upload an image with polygons or adjust the buffer distance and area range")
+                    print(f"Number of polygons input.: {len(list_polygons_input)}")
+        elif not merge_option:
+            list_polygons_input = listing_polygon_input(image2)
+            polygon_plot = st.empty()
+            polygon_plot.image(image2)
+            print(f"list_polygons_input: {list_polygons_input}")
+            if (len(list_polygons_input) > 0):
+                print(f"input vertices: {list_polygons_input[0][0]}")
+            if len(list_polygons_input) == 0:
+                upload_info.info("Please upload an image with polygons or adjust the buffer distance and area range")
+            print(f"Number of polygons input.: {len(list_polygons_input)}")
         with st.form("parameters_form"):
             col = st.columns(4)
             with col[0]:
@@ -334,9 +351,12 @@ def main():
                                               k1=k1,
                                               k2=k2,
                                               vertex_angle_weight=vertex_angle_weight)
-
-            centroid_input, sorted_vertices_input, vertex_angles_input, sorted_angles_input, polygon_angles_input = calculate_angles(list_polygons_input[0][0])
-            fig_input, polygon_angles_input, vertex_angles_input = plot_polygon_and_image(list_polygons_input[0][0], centroid_input, vertex_angles_input, sorted_angles_input, polygon_angles_input)
+            if len(list_polygons_input) == 1 or merge_option:
+                centroid_input, sorted_vertices_input, vertex_angles_input, sorted_angles_input, polygon_angles_input = calculate_angles(list_polygons_input[0][0])
+                fig_input, polygon_angles_input, vertex_angles_input = plot_polygon_and_image(list_polygons_input[0][0], centroid_input, vertex_angles_input, sorted_angles_input, polygon_angles_input)
+            elif not merge_option and len(list_polygons_input) > 1:
+                centroid_input, sorted_vertices_input, vertex_angles_input, sorted_angles_input, polygon_angles_input = calculate_angles(list_polygons_input[1][0])
+                fig_input, polygon_angles_input, vertex_angles_input = plot_polygon_and_image(list_polygons_input[1][0], centroid_input, vertex_angles_input, sorted_angles_input, polygon_angles_input)
             # st.pyplot(result_img)
             st.image(result_img)
             with st.expander("Detailed Results"):
